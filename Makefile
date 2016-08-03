@@ -1,4 +1,4 @@
-.PHONY: all init test
+.PHONY: all init test install
 
 all: test
 
@@ -7,3 +7,6 @@ init:
 
 test:
 	nosetests tests
+
+install:
+	python setup.py install
