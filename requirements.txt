@@ -1,0 +1,5 @@
+## module dependencies
+numpy
+scipy
+nose
+sphinx
