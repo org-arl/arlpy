@@ -71,21 +71,21 @@ class SigProcTestSuite(unittest.TestCase):
             np.testing.assert_allclose(a, b, rtol=0, atol=np.power(10.0, -precision), err_msg=msg)
 
     def test_time(self):
-        self.assertArrayEqual(arlpy.sigproc.time(1000, 500), np.arange(1000)/500.0)
-        self.assertArrayEqual(arlpy.sigproc.time(np.zeros(1000), 500), np.arange(1000)/500.0)
+        self.assertArrayEqual(arlpy.signal.time(1000, 500), np.arange(1000)/500.0)
+        self.assertArrayEqual(arlpy.signal.time(np.zeros(1000), 500), np.arange(1000)/500.0)
 
     def test_cw(self):
-        self.assertArrayEqual(arlpy.sigproc.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
-        self.assertArrayEqual(arlpy.sigproc.cw(10000, 0.1, 50000, ('tukey', 0.1)), scipy.signal.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
+        self.assertArrayEqual(arlpy.signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
+        self.assertArrayEqual(arlpy.signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), scipy.signal.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
 
     def test_envelope(self):
         x = np.random.normal(0, 1, 1000)
-        self.assertArrayEqual(arlpy.sigproc.envelope(x), np.abs(scipy.signal.hilbert(x)))
+        self.assertArrayEqual(arlpy.signal.envelope(x), np.abs(scipy.signal.hilbert(x)))
 
     def test_mseq(self):
         # we only test until 16, as longer sequences are too slow!
         for j in range(2, 17):
-            x = arlpy.sigproc.mseq(j)
+            x = arlpy.signal.mseq(j)
             self.assertArrayEqual(np.abs(x), np.ones(len(x)))
             x_fft = np.fft.fft(x)
             y = np.fft.ifft(x_fft*x_fft.conj()).real
@@ -97,18 +97,18 @@ class SigProcTestSuite(unittest.TestCase):
         pass
 
     def test_bb2pb2bb(self):
-        x = arlpy.sigproc.bb2pb(np.ones(1024), 18000, 27000, 108000)
-        self.assertArrayEqual(x[108:-108], np.sqrt(2)*np.cos(2*np.pi*27000*arlpy.sigproc.time(x,108000))[108:-108], precision=3)
+        x = arlpy.signal.bb2pb(np.ones(1024), 18000, 27000, 108000)
+        self.assertArrayEqual(x[108:-108], np.sqrt(2)*np.cos(2*np.pi*27000*arlpy.signal.time(x,108000))[108:-108], precision=3)
         x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
-        y = arlpy.sigproc.bb2pb(x,  18000, 27000, 108000)
-        z = arlpy.sigproc.pb2bb(y, 108000, 27000,  18000)
+        y = arlpy.signal.bb2pb(x,  18000, 27000, 108000)
+        z = arlpy.signal.pb2bb(y, 108000, 27000,  18000)
         d = z[18:-18]-x[18:-18]
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -25)
         self.assertArrayEqual(d, np.zeros_like(d), precision=1)
 
     def test_mfilter(self):
         x = np.random.normal(0, 1, 1000)
-        y = arlpy.sigproc.mfilter(x, np.pad(x, 10, 'constant'))
+        y = arlpy.signal.mfilter(x, np.pad(x, 10, 'constant'))
         self.assertEqual(len(y), 1020)
         self.assertEqual(np.argmax(y), 10)
         self.assertLess(np.max(y[:10]), np.max(y)/10)
@@ -117,7 +117,7 @@ class SigProcTestSuite(unittest.TestCase):
     def test_lfilter0(self):
         x = np.random.normal(0, 1, 1000)
         hb = np.array([0, 0, 1, 0], dtype=np.float)
-        self.assertArrayEqual(x, arlpy.sigproc.lfilter0(hb, 1, x))
+        self.assertArrayEqual(x, arlpy.signal.lfilter0(hb, 1, x))
 
 if __name__ == '__main__':
     unittest.main()
