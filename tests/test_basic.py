@@ -197,5 +197,21 @@ class CommsTestSuite(MyTestCase):
         x = 10*np.random.normal(0,1,10000) + 10j*np.random.normal(0,1,10000)
         self.assertApproxEqual(20*np.log10(10*np.sqrt(2)/np.std(comms.awgn(x, 6, measured=True)-x)), 6, precision=0)
 
+    def test_ser_ber(self):
+        x = comms.random_data(1000, M=2)
+        self.assertEqual(comms.ser(x, x), 0)
+        self.assertEqual(comms.ber(x, x), 0)
+        y = np.array(x)
+        y[50:150] = 1-y[50:150]
+        self.assertEqual(comms.ber(y, x), 0.1)
+        x = comms.random_data(1000, M=4)
+        self.assertEqual(comms.ser(x, x), 0)
+        self.assertRaises(ValueError, comms.ber, x, x)
+        self.assertEqual(comms.ber(x, x, M=4), 0)
+        y = np.array(x)
+        y[50:150] = y[50:150]^1
+        y[75:175] = y[75:175]^2
+        self.assertEqual(comms.ber(y, x, M=4), 0.1)
+
 if __name__ == '__main__':
     unittest.main()

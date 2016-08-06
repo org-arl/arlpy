@@ -3,6 +3,12 @@
 import numpy as _np
 import scipy.signal as _sp
 
+# set up population count table for fast BER computation
+_maxM = 64
+_popcount = _np.empty(_maxM, dtype=_np.int)
+for _i in range(_maxM):
+    _popcount[_i] = bin(_i).count('1')
+
 def random_data(size, M=2):
     """Generate random integers in the range [0, M-1]."""
     return _np.random.randint(0, M, size)
@@ -97,3 +103,27 @@ def awgn(x, snr, measured=False):
     else:
         y = x + _np.random.normal(0, noise, _np.shape(x))
     return y
+
+def ser(x, y):
+    """Measure symbol error rate between symbols in x and y."""
+    x = _np.asarray(x, dtype=_np.int)
+    y = _np.asarray(y, dtype=_np.int)
+    n = _np.product(_np.shape(x))
+    e = _np.count_nonzero(x^y)
+    return float(e)/n
+
+def ber(x, y, M=2):
+    """Measure bit error rate between symbols in x and y."""
+    x = _np.asarray(x, dtype=_np.int)
+    y = _np.asarray(y, dtype=_np.int)
+    if _np.any(x >= M) or _np.any(y >= M) or _np.any(x < 0) or _np.any(y < 0):
+        raise ValueError('Invalid data for specified M')
+    if M == 2:
+        return ser(x, y)
+    if M > _maxM:
+        raise ValueError('M > %d not supported' % (_maxM))
+    n = _np.product(_np.shape(x))*_np.log2(M)
+    e = x^y
+    e = e[_np.nonzero(e)]
+    e = _np.sum(_popcount[e])
+    return float(e)/n
