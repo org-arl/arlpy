@@ -78,6 +78,11 @@ class SigProcTestSuite(unittest.TestCase):
         self.assertArrayEqual(arlpy.signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
         self.assertArrayEqual(arlpy.signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), scipy.signal.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
 
+    def test_sweep(self):
+        self.assertArrayEqual(arlpy.signal.sweep(5000, 10000, 0.1, 50000), scipy.signal.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000, 'linear'))
+        self.assertArrayEqual(arlpy.signal.sweep(5000, 10000, 0.1, 50000, 'hyperbolic'), scipy.signal.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000, 'hyperbolic'))
+        self.assertArrayEqual(arlpy.signal.sweep(5000, 10000, 0.1, 50000, window=('tukey', 0.1)), scipy.signal.tukey(5000, 0.1)*scipy.signal.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000), precision=2)
+
     def test_envelope(self):
         x = np.random.normal(0, 1, 1000)
         self.assertArrayEqual(arlpy.signal.envelope(x), np.abs(scipy.signal.hilbert(x)))

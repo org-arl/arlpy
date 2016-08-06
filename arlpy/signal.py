@@ -11,9 +11,18 @@ def time(n, fs):
     return _np.arange(n, dtype=_np.float)/fs
 
 def cw(fc, duration, fs, window=None):
-    """Generate a sine wave with frequency fc, sampled at fs."""
-    n = round(duration*fs)
+    """Generate a sine wave with frequency fc."""
+    n = int(round(duration*fs))
     x = _np.sin(2*_np.pi*fc*time(n, fs))
+    if window is not None:
+        w = _sig.get_window(window, n)
+        x *= w
+    return x
+
+def sweep(f1, f2, duration, fs, method='linear', window=None):
+    """Generate frequency modulated sweep from f1 to f2."""
+    n = int(round(duration*fs))
+    x = _sig.chirp(time(n, fs), f1, duration, f2, method)
     if window is not None:
         w = _sig.get_window(window, n)
         x *= w
@@ -101,7 +110,7 @@ def lfilter0(b, a, x, axis=0):
     """Filter data with an IIR or FIR filter with zero DC group delay."""
     w, g = _sig.group_delay((b, a))
     ndx = _np.argmin(_np.abs(w))
-    d = int(_np.round(g[ndx]))
+    d = int(round(g[ndx]))
     x = _np.pad(x, (0, d), 'constant')
     y = _sig.lfilter(b, a, x, axis)[d:]
     return y
