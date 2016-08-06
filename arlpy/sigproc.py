@@ -10,6 +10,15 @@ def time(n, fs):
         n = len(n)
     return _np.arange(n, dtype=_np.float)/fs
 
+def cw(fc, duration, fs, window=None):
+    """Generate a sine wave with frequency fc, sampled at fs."""
+    n = round(duration*fs)
+    x = _np.sin(2*_np.pi*fc*time(n, fs))
+    if window is not None:
+        w = _sig.get_window(window, n)
+        x *= w
+    return x
+
 def envelope(x):
     """Generate a Hilbert envelope of the real signal x."""
     return _np.abs(_sig.hilbert(x, axis=0))
@@ -79,23 +88,20 @@ def pb2bb(x, fs, fc, fd=None):
         y = _sig.resample_poly(y, 2*fd, fs)[::2]
     return y
 
-def matchedfilter(x, s):
+def mfilter(s, x, axis=0, complex_output=False):
     """Matched filter recevied signal x using reference signal s."""
-    if _np.ndim(x) == 1 and _np.ndim(s) == 1:
-        y = _np.correlate(x, s, 'full')
-        return y[len(s)-1:len(s)-1+len(x)]
-    if _np.ndim(x) == 1 and _np.ndim(s) == 2:
-        [m,n] = _np.shape(s)
-        z = _np.zeros([len(x), n])
-        for j in range(n):
-            y = _np.correlate(x, s[:,j], 'full')
-            z[:,j] = y[m-1:m-1+len(x)]
-        return z
-    if _np.ndim(x) == 2 and _np.ndim(s) == 1:
-        [m,n] = _np.shape(x)
-        z = _np.zeros([m, n])
-        for j in range(n):
-            y = _np.correlate(x[:,j], s, 'full')
-            z[:,j] = y[len(s)-1:len(s)-1+m]
-        return z
-    raise ValueError('Either of x or s must be a vector')
+    hb = _np.conj(_np.flipud(s))
+    x = _np.pad(x, (0, len(s)-1), 'constant')
+    y = _sig.lfilter(hb, 1, x, axis)[len(s)-1:]
+    if not complex_output:
+        y = _np.abs(y)
+    return y
+
+def lfilter0(b, a, x, axis=0):
+    """Filter data with an IIR or FIR filter with zero DC group delay."""
+    w, g = _sig.group_delay((b, a))
+    ndx = _np.argmin(_np.abs(w))
+    d = int(_np.round(g[ndx]))
+    x = _np.pad(x, (0, d), 'constant')
+    y = _sig.lfilter(b, a, x, axis)[d:]
+    return y

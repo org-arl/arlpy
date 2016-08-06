@@ -74,6 +74,10 @@ class SigProcTestSuite(unittest.TestCase):
         self.assertArrayEqual(arlpy.sigproc.time(1000, 500), np.arange(1000)/500.0)
         self.assertArrayEqual(arlpy.sigproc.time(np.zeros(1000), 500), np.arange(1000)/500.0)
 
+    def test_cw(self):
+        self.assertArrayEqual(arlpy.sigproc.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
+        self.assertArrayEqual(arlpy.sigproc.cw(10000, 0.1, 50000, ('tukey', 0.1)), scipy.signal.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
+
     def test_envelope(self):
         x = np.random.normal(0, 1, 1000)
         self.assertArrayEqual(arlpy.sigproc.envelope(x), np.abs(scipy.signal.hilbert(x)))
@@ -101,6 +105,19 @@ class SigProcTestSuite(unittest.TestCase):
         d = z[18:-18]-x[18:-18]
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -25)
         self.assertArrayEqual(d, np.zeros_like(d), precision=1)
+
+    def test_mfilter(self):
+        x = np.random.normal(0, 1, 1000)
+        y = arlpy.sigproc.mfilter(x, np.pad(x, 10, 'constant'))
+        self.assertEqual(len(y), 1020)
+        self.assertEqual(np.argmax(y), 10)
+        self.assertLess(np.max(y[:10]), np.max(y)/10)
+        self.assertLess(np.max(y[11:]), np.max(y)/10)
+
+    def test_lfilter0(self):
+        x = np.random.normal(0, 1, 1000)
+        hb = np.array([0, 0, 1, 0], dtype=np.float)
+        self.assertArrayEqual(x, arlpy.sigproc.lfilter0(hb, 1, x))
 
 if __name__ == '__main__':
     unittest.main()
