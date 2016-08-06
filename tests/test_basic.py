@@ -126,5 +126,76 @@ class SigProcTestSuite(MyTestCase):
         hb = np.array([0, 0, 1, 0], dtype=np.float)
         self.assertArrayEqual(x, arlpy.signal.lfilter0(hb, 1, x))
 
+class CommsTestSuite(MyTestCase):
+
+    def test_random_data(self):
+        x = arlpy.comms.random_data(1000)
+        self.assertEqual(len(x), 1000)
+        self.assertEqual(np.min(x), 0)
+        self.assertEqual(np.max(x), 1)
+        x = arlpy.comms.random_data((1000, 2), M=8)
+        self.assertEqual(np.shape(x), (1000, 2))
+        self.assertEqual(np.min(x), 0)
+        self.assertEqual(np.max(x), 7)
+
+    def test_gray_code(self):
+        self.assertArrayEqual(arlpy.comms.gray_code(2), [0, 1])
+        self.assertArrayEqual(arlpy.comms.gray_code(4), [0, 1, 3, 2])
+        self.assertArrayEqual(arlpy.comms.gray_code(8), [0, 1, 3, 2, 6, 7, 5, 4])
+
+    def test_invert_map(self):
+        self.assertArrayEqual(arlpy.comms.invert_map(arlpy.comms.gray_code(8)), [0, 1, 3, 2, 7, 6, 4, 5])
+
+    def test_pam(self):
+        x = arlpy.comms.pam(2)
+        self.assertArrayEqual(x, [-1, 1], precision=4)
+        x = arlpy.comms.pam(4)
+        self.assertEqual(len(x), 4)
+        self.assertApproxEqual(np.mean(x), 0, precision=4)
+        self.assertApproxEqual(np.std(x), 1, precision=4)
+
+    def test_psk(self):
+        x = arlpy.comms.psk(2)
+        self.assertArrayEqual(x, [1, -1], precision=4)
+        x = arlpy.comms.psk(4)
+        self.assertArrayEqual(np.sqrt(2)*x, [1+1j, -1+1j, 1-1j, -1-1j], precision=4)
+        x = arlpy.comms.psk(4, gray=False)
+        self.assertArrayEqual(np.sqrt(2)*x, [1+1j, -1+1j, -1-1j, 1-1j], precision=4)
+        x = arlpy.comms.psk(8)
+        self.assertArrayEqual(np.abs(x), np.ones(8), precision=4)
+
+    def test_qam(self):
+        x = arlpy.comms.psk(16)
+        self.assertEqual(len(x), 16)
+        self.assertApproxEqual(np.mean(x), 0, precision=4)
+        self.assertApproxEqual(np.std(x), 1, precision=4)
+        x = arlpy.comms.psk(64)
+        self.assertEqual(len(x), 64)
+        self.assertApproxEqual(np.mean(x), 0, precision=4)
+        self.assertApproxEqual(np.std(x), 1, precision=4)
+
+    def test_iqplot(self):
+        # no regression test, since this is a graphics utility function
+        pass
+
+    def test_modulation(self):
+        x = arlpy.comms.random_data(1000, M=4)
+        y = arlpy.comms.modulate(x, arlpy.comms.psk(4))
+        self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
+        z = arlpy.comms.demodulate(y, arlpy.comms.psk(4))
+        self.assertArrayEqual(x, z)
+
+    def test_awgn(self):
+        x = np.zeros(10000)
+        self.assertApproxEqual(20*np.log10(1/np.std(arlpy.comms.awgn(x, 10))), 10, precision=0)
+        x = np.random.normal(0,1,10000)
+        self.assertApproxEqual(20*np.log10(1/np.std(arlpy.comms.awgn(x, 20)-x)), 20, precision=0)
+        x = np.random.normal(0,1,10000) + 1j*np.random.normal(0,1,10000)
+        self.assertApproxEqual(20*np.log10(1/np.std(arlpy.comms.awgn(x, 6)-x)), 6, precision=0)
+        x = 10*np.random.normal(0,1,10000)
+        self.assertApproxEqual(20*np.log10(10/np.std(arlpy.comms.awgn(x, 6, measured=True)-x)), 6, precision=0)
+        x = 10*np.random.normal(0,1,10000) + 10j*np.random.normal(0,1,10000)
+        self.assertApproxEqual(20*np.log10(10*np.sqrt(2)/np.std(arlpy.comms.awgn(x, 6, measured=True)-x)), 6, precision=0)
+
 if __name__ == '__main__':
     unittest.main()
