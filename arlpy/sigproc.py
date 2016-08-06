@@ -6,6 +6,8 @@ import scipy.signal as _sig
 
 def time(n, fs):
     """Generate a time vector for time series with n data points."""
+    if hasattr(n, "__len__"):
+        n = len(n)
     return _np.arange(n, dtype=_np.float)/fs
 
 def envelope(x):
@@ -49,11 +51,11 @@ def freqz(b, a=1, fs=2.0, worN=None, whole=False):
     plt.plot(f, 20*_np.log10(abs(h)), 'b')
     plt.ylabel('Amplitude [dB]', color='b')
     plt.xlabel('Frequency [Hz]')
-    ax2 = ax1.twinx()
+    plt.grid()
+    ax1.twinx()
     angles = _np.unwrap(_np.angle(h))
     plt.plot(f, angles, 'g')
     plt.ylabel('Angle (radians)', color='g')
-    plt.grid()
     plt.axis('tight')
     plt.show()
     return w, h
@@ -64,18 +66,17 @@ def bb2pb(x, fd, fc, fs=None):
         y = _np.array(x, dtype=_np.complex)
         fs = fd
     else:
-        y = _sig.resample(_np.asarray(x, dtype=_np.complex), _np.round(float(fs)/fd*len(x)))
-    y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(len(y),fs))
+        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd)
+    y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
     return _np.real(y)
 
 def pb2bb(x, fs, fc, fd=None):
     """Convert passband signal x sampled at fs to baseband with center frequency fc and sampling rate fd."""
-    y = x * _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(len(x),fs))
-    flen = int(_np.ceil(float(fs)/fc))
-    hb = _np.ones(flen)/flen
+    y = x * _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
+    hb = _sig.firwin(127, cutoff=0.6*fd, nyq=fs/2.0)
     y = _sig.filtfilt(hb, 1, y)
     if fd is not None and fd != fs:
-        y = _sig.resample(y, _np.round(float(fd)/fs*len(y)))
+        y = _sig.resample_poly(y, 2*fd, fs)[::2]
     return y
 
 def matchedfilter(x, s):
