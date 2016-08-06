@@ -4,7 +4,18 @@ import unittest
 import numpy as np
 import scipy.signal
 
-class UtilsTestSuite(unittest.TestCase):
+class MyTestCase(unittest.TestCase):
+
+    def assertApproxEqual(self, x, y, precision=0):
+        self.assertEqual(np.round(x, decimals=precision), np.round(y, decimals=precision))
+
+    def assertArrayEqual(self, a, b, msg='', precision=None):
+        if precision is None:
+            np.testing.assert_array_equal(a, b, err_msg=msg)
+        else:
+            np.testing.assert_allclose(a, b, rtol=0, atol=np.power(10.0, -precision), err_msg=msg)
+
+class UtilsTestSuite(MyTestCase):
 
     def test_dB_conversions(self):
         self.assertEqual(arlpy.utils.mag2db(10.0), 20.0)
@@ -12,7 +23,7 @@ class UtilsTestSuite(unittest.TestCase):
         self.assertEqual(arlpy.utils.pow2db(100.0), 20.0)
         self.assertEqual(arlpy.utils.db2pow(20.0), 100.0)
 
-class GeoTestSuite(unittest.TestCase):
+class GeoTestSuite(MyTestCase):
 
     def test_pos(self):
         self.assertEqual(map(round, arlpy.geo.pos([1, 103, 20])), [277438, 110598, 20])
@@ -32,10 +43,7 @@ class GeoTestSuite(unittest.TestCase):
         self.assertEqual(arlpy.geo.distance(p1, p1), 0.0)
         self.assertEqual(arlpy.geo.distance(p1, p2), 500.0)
 
-class UwaTestSuite(unittest.TestCase):
-
-    def assertApproxEqual(self, x, y, precision=0):
-        self.assertEqual(np.round(x, decimals=precision), np.round(y, decimals=precision))
+class UwaTestSuite(MyTestCase):
 
     def test_soundspeed(self):
         self.assertApproxEqual(arlpy.uwa.soundspeed(27, 35, 10), 1539)
@@ -62,13 +70,7 @@ class UwaTestSuite(unittest.TestCase):
         self.assertApproxEqual(arlpy.uwa.doppler(10, 50000), 50325)
         self.assertApproxEqual(arlpy.uwa.doppler(-10, 50000), 49675)
 
-class SigProcTestSuite(unittest.TestCase):
-
-    def assertArrayEqual(self, a, b, msg='', precision=None):
-        if precision is None:
-            np.testing.assert_array_equal(a, b, err_msg=msg)
-        else:
-            np.testing.assert_allclose(a, b, rtol=0, atol=np.power(10.0, -precision), err_msg=msg)
+class SigProcTestSuite(MyTestCase):
 
     def test_time(self):
         self.assertArrayEqual(arlpy.signal.time(1000, 500), np.arange(1000)/500.0)
@@ -98,7 +100,7 @@ class SigProcTestSuite(unittest.TestCase):
             self.assertTrue((np.round(y[2:])==round(y[1])).all(), 'mseq(%d)'%(j))
 
     def test_freqz(self):
-        # no test, since this is a graphics utility function
+        # no regression test, since this is a graphics utility function
         pass
 
     def test_bb2pb2bb(self):
@@ -116,8 +118,8 @@ class SigProcTestSuite(unittest.TestCase):
         y = arlpy.signal.mfilter(x, np.pad(x, 10, 'constant'))
         self.assertEqual(len(y), 1020)
         self.assertEqual(np.argmax(y), 10)
-        self.assertLess(np.max(y[:10]), np.max(y)/10)
-        self.assertLess(np.max(y[11:]), np.max(y)/10)
+        self.assertLess(np.max(y[:10]), np.max(y)/8)
+        self.assertLess(np.max(y[11:]), np.max(y)/8)
 
     def test_lfilter0(self):
         x = np.random.normal(0, 1, 1000)
