@@ -152,6 +152,10 @@ class CommsTestSuite(MyTestCase):
         x = comms.random_data(1000, 8)
         self.assertArrayEqual(comms.bi2sym(comms.sym2bi(x, 8), 8), x)
 
+    def test_ook(self):
+        x = comms.ook()
+        self.assertArrayEqual(x, [0, np.sqrt(2)], precision=4)
+
     def test_pam(self):
         x = comms.pam(2)
         self.assertArrayEqual(x, [-1, 1], precision=4)
@@ -159,6 +163,8 @@ class CommsTestSuite(MyTestCase):
         self.assertEqual(len(x), 4)
         self.assertApproxEqual(np.mean(x), 0, precision=4)
         self.assertApproxEqual(np.std(x), 1, precision=4)
+        x = comms.pam(2, centered=False)
+        self.assertArrayEqual(x, [0, np.sqrt(2)], precision=4)
 
     def test_psk(self):
         x = comms.psk(2)
@@ -210,6 +216,12 @@ class CommsTestSuite(MyTestCase):
         self.assertArrayEqual(np.abs(y), np.ones(4000), precision=4)
         y = comms.modulate([0, 1, 2, 3], comms.msk())
         self.assertArrayEqual(y, [1, 1j, -1, -1j, 1, 1j, -1, 1j, 1, -1j, -1, -1j, 1, -1j, -1, 1j], precision=4)
+        y = comms.modulate(x, comms.msk())
+        z = comms.demodulate(y, comms.msk())
+        self.assertArrayEqual(x, z)
+        y = comms.modulate(x, comms.pam(m=4, centered=False))
+        z = comms.demodulate(-y, comms.pam(m=4, centered=False))
+        self.assertArrayEqual(x, z)
 
     def test_awgn(self):
         x = np.zeros(10000)

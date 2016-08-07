@@ -33,13 +33,12 @@ def bi2sym(x, m):
     x = _np.asarray(x, dtype=_np.int)
     if _np.any(x < 0) or _np.any(x > 1):
         raise ValueError('Invalid data bits')
-    y = _np.zeros(len(x)/n, dtype=_np.int)
-    a = 0
-    for i in range(len(x)):
-        a = (a << 1) | x[i]
-        if i % n == n-1:
-            y[i/n] = a
-            a = 0
+    nsym = len(x)/n
+    x = _np.reshape(x, (nsym, n))
+    y = _np.zeros(nsym, dtype=_np.int)
+    for i in range(n):
+        y <<= 1
+        y |= x[:, i]
     return y
 
 def sym2bi(x, m):
@@ -50,16 +49,21 @@ def sym2bi(x, m):
     x = _np.asarray(x, dtype=_np.int)
     if _np.any(x < 0) or _np.any(x >= m):
         raise ValueError('Invalid data for specified m')
-    y = _np.zeros(n*len(x), dtype=_np.int)
-    for i in range(len(x)):
-        y[n*i:n*(i+1)] = [1 if d=='1' else 0 for d in bin(x[i]|(1<<n))[3:]]
-    return y
+    y = _np.zeros((len(x), n), dtype=_np.int)
+    for i in range(n):
+        y[:, n-i-1] = (x >> i) & 1
+    return _np.ravel(y)
 
-def pam(m=2, gray=True):
+def ook():
+    """Generate an OOK constellation."""
+    return _np.array([0, _np.sqrt(2)], dtype=_np.float)
+
+def pam(m=2, gray=True, centered=True):
     """Generate a PAM constellation with m signal points."""
     x = _np.arange(m, dtype=_np.float)
-    x -= _np.mean(x)
-    x /= _np.std(x)
+    if centered:
+        x -= _np.mean(x)
+    x /= _np.sqrt(_np.mean(x**2))
     if gray:
         x = x[invert_map(gray_code(m))]
     return x
@@ -129,26 +133,25 @@ def iqplot(data, spec='.', labels=None):
 
 def modulate(data, const):
     """Modulate data into signal points for the specified constellation."""
-    m = len(const)
     data = _np.asarray(data, dtype=_np.int)
-    if _np.any(data > m-1) or _np.any(data < 0):
-        raise ValueError('Invalid data for specified constellation')
     const = _np.asarray(const)
-    # single-dimentional constellations used by PAM, PSK, QAM, etc
-    if const.ndim == 1:
-        f = _np.vectorize(lambda x: const[x], otypes=[const.dtype])
-        return f(data)
-    # multi-dimensional constellations used by FSK, etc
-    (_, n) = const.shape
-    y = _np.empty(n*len(data), dtype=const.dtype)
-    for i in range(len(data)):
-        y[n*i:n*(i+1)] = const[data[i]]
-    return y
+    return _np.ravel(const[data])
 
-def demodulate(x, const):
+def demodulate(x, const, metric=None, decision=lambda a: _np.argmin(a, axis=1)):
     """Demodulate complex signal based on the specified constellation."""
-    f = _np.vectorize(lambda y: _np.argmin(_np.abs(y-const)), otypes=[_np.int])
-    return f(x)
+    if metric is None:
+        if const.ndim == 2:
+            # multi-dimensional constellation => matched filter
+            m, n = const.shape
+            metric = lambda a, b: -_np.abs(_np.sum(_np.expand_dims(_np.reshape(a,(len(x)/n, n)), axis=2) * b.conj().T, axis=1))
+        elif _np.all(_np.abs(const.imag) < 1e-6):
+            # all real constellation => incoherent distance
+            metric = lambda a, b: _np.abs(_np.abs(a)-b)
+        else:
+            # general PSK/QAM constellation => Euclidean distance
+            metric = lambda a, b: _np.abs(a-b)
+    y = metric(_np.expand_dims(x, axis=1), const)
+    return y if decision is None else decision(y)
 
 def awgn(x, snr, measured=False):
     """Add Gaussian noise to signal."""
