@@ -133,7 +133,7 @@ class CommsTestSuite(MyTestCase):
         self.assertEqual(len(x), 1000)
         self.assertEqual(np.min(x), 0)
         self.assertEqual(np.max(x), 1)
-        x = comms.random_data((1000, 2), M=8)
+        x = comms.random_data((1000, 2), m=8)
         self.assertEqual(np.shape(x), (1000, 2))
         self.assertEqual(np.min(x), 0)
         self.assertEqual(np.max(x), 7)
@@ -145,6 +145,12 @@ class CommsTestSuite(MyTestCase):
 
     def test_invert_map(self):
         self.assertArrayEqual(comms.invert_map(comms.gray_code(8)), [0, 1, 3, 2, 7, 6, 4, 5])
+
+    def test_sym2bi2sym(self):
+        self.assertArrayEqual(comms.sym2bi([1, 2, 7], 8), [0, 0, 1, 0, 1, 0, 1, 1, 1])
+        self.assertArrayEqual(comms.bi2sym([1, 0, 1, 1, 0, 1, 0, 0], 4), [2, 3, 1, 0])
+        x = comms.random_data(1000, 8)
+        self.assertArrayEqual(comms.bi2sym(comms.sym2bi(x, 8), 8), x)
 
     def test_pam(self):
         x = comms.pam(2)
@@ -179,7 +185,7 @@ class CommsTestSuite(MyTestCase):
         pass
 
     def test_modulation(self):
-        x = comms.random_data(1000, M=4)
+        x = comms.random_data(1000, m=4)
         y = comms.modulate(x, comms.psk(4))
         self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
         z = comms.demodulate(y, comms.psk(4))
@@ -198,20 +204,20 @@ class CommsTestSuite(MyTestCase):
         self.assertApproxEqual(20*np.log10(10*np.sqrt(2)/np.std(comms.awgn(x, 6, measured=True)-x)), 6, precision=0)
 
     def test_ser_ber(self):
-        x = comms.random_data(1000, M=2)
+        x = comms.random_data(1000, m=2)
         self.assertEqual(comms.ser(x, x), 0)
         self.assertEqual(comms.ber(x, x), 0)
         y = np.array(x)
         y[50:150] = 1-y[50:150]
         self.assertEqual(comms.ber(y, x), 0.1)
-        x = comms.random_data(1000, M=4)
+        x = comms.random_data(1000, m=4)
         self.assertEqual(comms.ser(x, x), 0)
         self.assertRaises(ValueError, comms.ber, x, x)
-        self.assertEqual(comms.ber(x, x, M=4), 0)
+        self.assertEqual(comms.ber(x, x, m=4), 0)
         y = np.array(x)
         y[50:150] = y[50:150]^1
         y[75:175] = y[75:175]^2
-        self.assertEqual(comms.ber(y, x, M=4), 0.1)
+        self.assertEqual(comms.ber(y, x, m=4), 0.1)
 
 if __name__ == '__main__':
     unittest.main()
