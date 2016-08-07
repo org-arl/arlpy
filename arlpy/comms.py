@@ -157,13 +157,15 @@ def diff_encode(x):
     """Encode phase differential baseband signal."""
     x = _np.asarray(x)
     y = _np.insert(x, 0, 1)
-    y[2:] *= x[:-1].conj()
+    for j in range(2,len(y)):
+        y[j] *= y[j-1]
     return y
 
 def diff_decode(x):
     """Decode phase differential baseband signal."""
+    x = _np.asarray(x)
     y = _np.array(x)
-    y[1:] *= y[:-1]
+    y[1:] *= x[:-1].conj()
     return y[1:]
 
 def awgn(x, snr, measured=False):
