@@ -153,6 +153,19 @@ def demodulate(x, const, metric=None, decision=lambda a: _np.argmin(a, axis=1)):
     y = metric(_np.expand_dims(x, axis=1), const)
     return y if decision is None else decision(y)
 
+def diff_encode(x):
+    """Encode phase differential baseband signal."""
+    x = _np.asarray(x)
+    y = _np.insert(x, 0, 1)
+    y[2:] *= x[:-1].conj()
+    return y
+
+def diff_decode(x):
+    """Decode phase differential baseband signal."""
+    y = _np.array(x)
+    y[1:] *= y[:-1]
+    return y[1:]
+
 def awgn(x, snr, measured=False):
     """Add Gaussian noise to signal."""
     signal = _np.std(x) if measured else 1.0

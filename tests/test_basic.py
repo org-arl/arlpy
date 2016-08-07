@@ -211,6 +211,9 @@ class CommsTestSuite(MyTestCase):
         self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
         z = comms.demodulate(y, comms.psk(4))
         self.assertArrayEqual(x, z)
+        y = comms.diff_encode(comms.modulate(x, comms.psk(4)))
+        z = comms.demodulate(comms.diff_decode(y), comms.psk(4))
+        self.assertArrayEqual(x, z)
         y = comms.modulate(comms.random_data(1000), comms.fsk())
         self.assertEqual(len(y), 4000)
         self.assertArrayEqual(np.abs(y), np.ones(4000), precision=4)
@@ -222,6 +225,11 @@ class CommsTestSuite(MyTestCase):
         y = comms.modulate(x, comms.pam(m=4, centered=False))
         z = comms.demodulate(-y, comms.pam(m=4, centered=False))
         self.assertArrayEqual(x, z)
+
+    def test_diff(self):
+        self.assertArrayEqual(comms.diff_encode([1, 1, -1, -1, -1, 1]), [ 1,  1,  1, -1,  1,  1, -1])
+        x = [1, 1, -1, -1j, -1j, 1j, 1, -1, -1j, 1]
+        self.assertArrayEqual(comms.diff_decode(comms.diff_encode(x)), x)
 
     def test_awgn(self):
         x = np.zeros(10000)
