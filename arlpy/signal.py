@@ -88,10 +88,12 @@ def bb2pb(x, fd, fc, fs=None):
     y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
     return _np.real(y)
 
-def pb2bb(x, fs, fc, fd=None):
+def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     """Convert passband signal x sampled at fs to baseband with center frequency fc and sampling rate fd."""
+    if cutoff is None:
+        cutoff = 0.6*fd if fd is not None else 1.1*fc
     y = x * _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
-    hb = _sig.firwin(127, cutoff=0.6*fd, nyq=fs/2.0)
+    hb = _sig.firwin(flen, cutoff=cutoff, nyq=fs/2.0)
     y = _sig.filtfilt(hb, 1, y)
     if fd is not None and fd != fs:
         y = _sig.resample_poly(y, 2*fd, fs)[::2]
