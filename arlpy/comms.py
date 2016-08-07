@@ -93,6 +93,25 @@ def qam(m=16, gray=True):
         x = x[ndx]
     return x
 
+def fsk(m=2, n=None):
+    """Generate a m-FSK constellation with n baseband samples per symbol."""
+    if n is None:
+        n = 2*m
+    if n < m:
+        raise ValueError('n must be >= m')
+    f = _np.linspace(-1.0, 1.0, m) * (0.5-0.5/m)
+    x = _np.empty((m, n), dtype=_np.complex)
+    for i in range(m):
+        x[i] = _np.exp(-2j*_np.pi*f[i]*_np.arange(n))
+    return x
+
+def msk():
+    """Generate a MSK constellation with 4 baseband samples per 2-bit symbol."""
+    return _np.array([[1,  1j, -1, -1j],
+                      [1,  1j, -1,  1j],
+                      [1, -1j, -1, -1j],
+                      [1, -1j, -1,  1j]], dtype=_np.complex)
+
 def iqplot(data, spec='.', labels=None):
     """Plot signal points."""
     import matplotlib.pyplot as plt
@@ -111,12 +130,20 @@ def iqplot(data, spec='.', labels=None):
 def modulate(data, const):
     """Modulate data into signal points for the specified constellation."""
     m = len(const)
-    data = data.astype(int)
+    data = _np.asarray(data, dtype=_np.int)
     if _np.any(data > m-1) or _np.any(data < 0):
         raise ValueError('Invalid data for specified constellation')
     const = _np.asarray(const)
-    f = _np.vectorize(lambda x: const[x], otypes=[const.dtype])
-    return f(data)
+    # single-dimentional constellations used by PAM, PSK, QAM, etc
+    if const.ndim == 1:
+        f = _np.vectorize(lambda x: const[x], otypes=[const.dtype])
+        return f(data)
+    # multi-dimensional constellations used by FSK, etc
+    (_, n) = const.shape
+    y = _np.empty(n*len(data), dtype=const.dtype)
+    for i in range(len(data)):
+        y[n*i:n*(i+1)] = const[data[i]]
+    return y
 
 def demodulate(x, const):
     """Demodulate complex signal based on the specified constellation."""

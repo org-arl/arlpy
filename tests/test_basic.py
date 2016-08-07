@@ -180,6 +180,21 @@ class CommsTestSuite(MyTestCase):
         self.assertApproxEqual(np.mean(x), 0, precision=4)
         self.assertApproxEqual(np.std(x), 1, precision=4)
 
+    def test_fsk(self):
+        x = comms.fsk(2)
+        self.assertEqual(x.shape, (2, 4))
+        self.assertArrayEqual(x, np.array([[1, 1j, -1, -1j], [1, -1j, -1, 1j]]), precision=4)
+        x = comms.fsk(2, 8)
+        self.assertEqual(x.shape, (2, 8))
+        self.assertArrayEqual(x, np.array([[1, 1j, -1, -1j, 1, 1j, -1, -1j], [1, -1j, -1, 1j, 1, -1j, -1, 1j]]), precision=4)
+        x = comms.fsk(4)
+        self.assertEqual(x.shape, (4, 8))
+
+    def test_msk(self):
+        x = comms.msk()
+        self.assertEqual(x.shape, (4, 4))
+        self.assertArrayEqual(x, np.array([[1, 1j, -1, -1j], [1, 1j, -1, 1j], [1, -1j, -1, -1j], [1, -1j, -1, 1j]]))
+
     def test_iqplot(self):
         # no regression test, since this is a graphics utility function
         pass
@@ -190,6 +205,11 @@ class CommsTestSuite(MyTestCase):
         self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
         z = comms.demodulate(y, comms.psk(4))
         self.assertArrayEqual(x, z)
+        y = comms.modulate(comms.random_data(1000), comms.fsk())
+        self.assertEqual(len(y), 4000)
+        self.assertArrayEqual(np.abs(y), np.ones(4000), precision=4)
+        y = comms.modulate([0, 1, 2, 3], comms.msk())
+        self.assertArrayEqual(y, [1, 1j, -1, -1j, 1, 1j, -1, 1j, 1, -1j, -1, -1j, 1, -1j, -1, 1j], precision=4)
 
     def test_awgn(self):
         x = np.zeros(10000)
