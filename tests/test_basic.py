@@ -206,6 +206,11 @@ class CommsTestSuite(MyTestCase):
         pass
 
     def test_modulation(self):
+        x = comms.random_data(1000)
+        y = comms.modulate(x, comms.psk())
+        self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
+        z = comms.demodulate(y, comms.psk())
+        self.assertArrayEqual(x, z)
         x = comms.random_data(1000, m=4)
         y = comms.modulate(x, comms.psk(4))
         self.assertArrayEqual(np.abs(y), np.ones(1000), precision=4)
