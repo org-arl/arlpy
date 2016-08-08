@@ -100,7 +100,7 @@ def qam(m=16, gray=True):
 def fsk(m=2, n=None):
     """Generate a m-FSK constellation with n baseband samples per symbol."""
     if n is None:
-        n = m
+        n = 2*m
     if n < m:
         raise ValueError('n must be >= m')
     f = _np.linspace(-1.0, 1.0, m) * (0.5-0.5/m)

@@ -219,9 +219,9 @@ class CommsTestSuite(MyTestCase):
         y = comms.diff_encode(comms.modulate(x, comms.psk(4))) * 1j
         z = comms.demodulate(comms.diff_decode(y), comms.psk(4))
         self.assertArrayEqual(x, z)
-        y = comms.modulate(comms.random_data(1000), comms.fsk())
-        self.assertEqual(len(y), 2000)
-        self.assertArrayEqual(np.abs(y), np.ones(2000), precision=4)
+        y = comms.modulate(comms.random_data(1000), comms.fsk(2, 4))
+        self.assertEqual(len(y), 4000)
+        self.assertArrayEqual(np.abs(y), np.ones(4000), precision=4)
         y = comms.modulate([0, 1, 2, 3], comms.msk())
         self.assertArrayEqual(y, [1, 1j, -1, -1j, 1, 1j, -1, 1j, 1, -1j, -1, -1j, 1, -1j, -1, 1j], precision=4)
         y = comms.modulate(x, comms.msk())
