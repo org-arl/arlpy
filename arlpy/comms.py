@@ -202,3 +202,39 @@ def ber(x, y, m=2):
     e = e[_np.nonzero(e)]
     e = _np.sum(_popcount[e])
     return float(e)/n
+
+def rcosfir(fs, fd=1, beta=0.25, n=None):
+    """Generates a raised cosine FIR filter of length n samples."""
+    if n is None:
+        # from http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
+        # since this recommendation is for root raised cosine filter, we use double it for raised cosine filter
+        n = 2*(33-int(44*beta) if beta < 0.65 else 5)+1
+    n += 1-(n%2)
+    m = int((n-1)/2)
+    ts = float(fs)/fd
+    b = _np.empty(n)
+    b[m] = 1
+    t = _np.arange(1, m+1, dtype=_np.float)/ts
+    b[m+1:] = _np.sin(_np.pi*t)/(_np.pi*t)
+    for i in range(m):
+        b[m+1+i] *= _np.pi/4 if _np.abs(t[i]) == 1/(2*beta) else _np.cos(_np.pi*beta*t[i])/(1-(2*beta*t[i])**2)
+    b[:m] = _np.flipud(b[m+1:])
+    return b
+
+def rrcosfir(fs, fd=1, beta=0.25, n=None):
+    """Generates a root raised cosine FIR filter of length n samples."""
+    if n is None:
+        # from http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
+        n = 33-int(44*beta) if beta < 0.65 else 5
+    n += 1-(n%2)
+    m = int((n-1)/2)
+    ts = float(fs)/fd
+    b = _np.empty(n)
+    b[m] = (1-beta+4*beta/_np.pi)/_np.sqrt(ts)
+    for i in range(1,m+1):
+        t = i/ts
+        if t == 1/(4*beta):
+            b[m+i] = b[m-i] = beta/(_np.sqrt(2)*ts)*((1+2/_np.pi)*_np.sin(_np.pi/(4*beta))+(1-2/_np.pi)*_np.cos(_np.pi/(4*beta)))
+        else:
+            b[m+i] = b[m-i] = (_np.sin(_np.pi*t*(1-beta))+4*beta*t*_np.cos(_np.pi*t*(1+beta)))/(_np.sqrt(ts)*_np.pi*t*(1-(4*beta*t)**2))
+    return b
