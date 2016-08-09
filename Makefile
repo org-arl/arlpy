@@ -1,4 +1,4 @@
-.PHONY: all init test install
+.PHONY: all init test docs install clean
 
 all: test
 
@@ -8,5 +8,11 @@ init:
 test:
 	nosetests tests
 
+docs:
+	sphinx-build -b html docs build
+
 install:
 	python setup.py install
+
+clean:
+	rm -rf build

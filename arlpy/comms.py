@@ -1,3 +1,13 @@
+##############################################################################
+#
+# Copyright (c) 2016, Mandar Chitre
+#
+# This file is part of arlpy which is released under Simplified BSD License.
+# See file LICENSE or go to http://www.opensource.org/licenses/BSD-3-Clause
+# for full license details.
+#
+##############################################################################
+
 """Communications toolbox."""
 
 import numpy as _np
@@ -252,7 +262,7 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     y = _sp.upfirdn(g, x, up=sps)
     if fc != 0:
         y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
-        y = _np.real(y)
+        y = y.real
     return y
 
 def downconvert(x, sps, fc, fs=2.0, g=None):

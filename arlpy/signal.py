@@ -1,3 +1,13 @@
+##############################################################################
+#
+# Copyright (c) 2016, Mandar Chitre
+#
+# This file is part of arlpy which is released under Simplified BSD License.
+# See file LICENSE or go to http://www.opensource.org/licenses/BSD-3-Clause
+# for full license details.
+#
+##############################################################################
+
 """Signal processing toolbox."""
 
 import operator as _op
@@ -86,7 +96,7 @@ def bb2pb(x, fd, fc, fs=None):
     else:
         y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd)
     y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
-    return _np.real(y)
+    return y.real
 
 def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     """Convert passband signal x sampled at fs to baseband with center frequency fc and sampling rate fd."""
