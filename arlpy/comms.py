@@ -3,7 +3,8 @@
 import numpy as _np
 import scipy.signal as _sp
 
-import signal as _sig
+from numpy import pi as _pi, sin as _sin, cos as _cos, sqrt as _sqrt
+from signal import time as _time
 
 # set up population count table for fast BER computation
 _MAX_M = 64
@@ -58,14 +59,14 @@ def sym2bi(x, m):
 
 def ook():
     """Generate an OOK constellation."""
-    return _np.array([0, _np.sqrt(2)], dtype=_np.float)
+    return _np.array([0, _sqrt(2)], dtype=_np.float)
 
 def pam(m=2, gray=True, centered=True):
     """Generate a PAM constellation with m signal points."""
     x = _np.arange(m, dtype=_np.float)
     if centered:
         x -= _np.mean(x)
-    x /= _np.sqrt(_np.mean(x**2))
+    x /= _sqrt(_np.mean(x**2))
     if gray:
         x = x[invert_map(gray_code(m))]
     return x
@@ -73,15 +74,15 @@ def pam(m=2, gray=True, centered=True):
 def psk(m=2, phase0=None, gray=True):
     """Generate a PSK constellation with m signal points."""
     if phase0 is None:
-        phase0 = _np.pi/4 if m == 4 else 0
-    x = _np.round(_np.exp(1j*(2*_np.pi/m*_np.arange(m)+phase0)), decimals=8)
+        phase0 = _pi/4 if m == 4 else 0
+    x = _np.round(_np.exp(1j*(2*_pi/m*_np.arange(m)+phase0)), decimals=8)
     if gray:
         x = x[invert_map(gray_code(m))]
     return x
 
 def qam(m=16, gray=True):
     """Generate a QAM constellation with m signal points."""
-    n = int(_np.sqrt(m))
+    n = int(_sqrt(m))
     if n*n != m:
         raise ValueError('m must be an integer squared')
     x = _np.empty((n, n), dtype=_np.complex)
@@ -108,7 +109,7 @@ def fsk(m=2, n=None):
     f = _np.linspace(-1.0, 1.0, m) * (0.5-0.5/m)
     x = _np.empty((m, n), dtype=_np.complex)
     for i in range(m):
-        x[i] = _np.exp(-2j*_np.pi*f[i]*_np.arange(n))
+        x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
 
 def msk():
@@ -175,7 +176,7 @@ def awgn(x, snr, measured=False):
     signal = _np.std(x) if measured else 1.0
     noise = signal * _np.power(10, -snr/20.0)
     if x.dtype == _np.complex:
-        noise /= _np.sqrt(2)
+        noise /= _sqrt(2)
         y = x + _np.random.normal(0, noise, _np.shape(x)) + 1j*_np.random.normal(0, noise, _np.shape(x))
     else:
         y = x + _np.random.normal(0, noise, _np.shape(x))
@@ -215,10 +216,10 @@ def rcosfir(beta, sps, span=None):
     t = _np.arange(-delay, delay+1, dtype=_np.float)/sps
     denom = 1 - (2*beta*t)**2
     eps = _np.finfo(float).eps
-    idx1 = _np.nonzero(_np.abs(denom) > _np.sqrt(eps))
-    b = _np.full_like(t, beta*_np.sin(_np.pi/(2*beta))/(2*sps))
-    b[idx1] = _np.sinc(t[idx1]) * _np.cos(_np.pi*beta*t[idx1])/denom[idx1] / sps
-    b /= _np.sqrt(_np.sum(b**2))
+    idx1 = _np.nonzero(_np.abs(denom) > _sqrt(eps))
+    b = _np.full_like(t, beta*_sin(_pi/(2*beta))/(2*sps))
+    b[idx1] = _np.sinc(t[idx1]) * _cos(_pi*beta*t[idx1])/denom[idx1] / sps
+    b /= _sqrt(_np.sum(b**2))
     return b
 
 def rrcosfir(beta, sps, span=None):
@@ -229,37 +230,37 @@ def rrcosfir(beta, sps, span=None):
     delay = int(span*sps/2)
     t = _np.arange(-delay, delay+1, dtype=_np.float)/sps
     b = _np.empty_like(t)
-    b[delay] = -1/(_np.pi*sps) * (_np.pi*(beta-1)-4*beta)
+    b[delay] = -1/(_pi*sps) * (_pi*(beta-1)-4*beta)
     eps = _np.finfo(float).eps
-    idx2 = _np.nonzero(_np.abs(_np.abs(4*beta*t)-1) < _np.sqrt(eps))
+    idx2 = _np.nonzero(_np.abs(_np.abs(4*beta*t)-1) < _sqrt(eps))
     if len(idx2) > 0:
-        b[idx2] = (_np.pi*(beta+1)*_np.sin(_np.pi*(beta+1)/(4*beta))
-                   - 4*beta*_np.sin(_np.pi*(beta-1)/(4*beta))
-                   + _np.pi*(beta-1)*_np.cos(_np.pi*(beta-1)/(4*beta))) / (2*_np.pi*sps)
+        b[idx2] = (_pi*(beta+1)*_sin(_pi*(beta+1)/(4*beta))
+                   - 4*beta*_sin(_pi*(beta-1)/(4*beta))
+                   + _pi*(beta-1)*_cos(_pi*(beta-1)/(4*beta))) / (2*_pi*sps)
     ind = _np.arange(len(t))
     ind = _np.delete(ind, _np.append(idx2, delay))
     nind = t[ind]
-    b[ind] = -4*beta/sps * (_np.cos((1+beta)*_np.pi*nind) + _np.sin((1-beta)*_np.pi*nind)/(4*beta*nind)) / (_np.pi*((4*beta*nind)**2-1))
-    b /= _np.sqrt(_np.sum(b**2))
+    b[ind] = -4*beta/sps * (_cos((1+beta)*_pi*nind) + _sin((1-beta)*_pi*nind)/(4*beta*nind)) / (_pi*((4*beta*nind)**2-1))
+    b /= _sqrt(_np.sum(b**2))
     return b
 
 def upconvert(x, sps, fc, fs=2.0, g=None):
     """Upconvert a complex baseband signal with pulse shaping."""
     if g is None:
-        g = _np.ones(sps)/_np.sqrt(sps)  # implied rectangular pulse shaping
+        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
     x = _np.asarray(x, dtype=_np.complex)
     y = _sp.upfirdn(g, x, up=sps)
     if fc != 0:
-        y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*_sig.time(y, fs))
+        y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
         y = _np.real(y)
     return y
 
 def downconvert(x, sps, fc, fs=2.0, g=None):
     """Downconvert a passband signal with a matched pulse shaping filter."""
     if g is None:
-        g = _np.ones(sps)/_np.sqrt(sps)  # implied rectangular pulse shaping
+        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
     y = _np.array(x, dtype=_np.complex)
     if fc != 0:
-        y *= _np.sqrt(2)*_np.exp(2j*_np.pi*fc*_sig.time(y, fs))
+        y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
     y = _sp.upfirdn(g, y, down=sps)
     return y
