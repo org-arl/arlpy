@@ -3,6 +3,8 @@
 import numpy as _np
 import scipy.signal as _sp
 
+import signal as _sig
+
 # set up population count table for fast BER computation
 _MAX_M = 64
 _popcount = _np.empty(_MAX_M, dtype=_np.int)
@@ -240,3 +242,24 @@ def rrcosfir(beta, sps, span=None):
     b[ind] = -4*beta/sps * (_np.cos((1+beta)*_np.pi*nind) + _np.sin((1-beta)*_np.pi*nind)/(4*beta*nind)) / (_np.pi*((4*beta*nind)**2-1))
     b /= _np.sqrt(_np.sum(b**2))
     return b
+
+def upconvert(x, sps, fc, fs=2.0, g=None):
+    """Upconvert a complex baseband signal with pulse shaping."""
+    if g is None:
+        g = _np.ones(sps)/_np.sqrt(sps)  # implied rectangular pulse shaping
+    x = _np.asarray(x, dtype=_np.complex)
+    y = _sp.upfirdn(g, x, up=sps)
+    if fc != 0:
+        y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*_sig.time(y, fs))
+        y = _np.real(y)
+    return y
+
+def downconvert(x, sps, fc, fs=2.0, g=None):
+    """Downconvert a passband signal with a matched pulse shaping filter."""
+    if g is None:
+        g = _np.ones(sps)/_np.sqrt(sps)  # implied rectangular pulse shaping
+    y = _np.array(x, dtype=_np.complex)
+    if fc != 0:
+        y *= _np.sqrt(2)*_np.exp(2j*_np.pi*fc*_sig.time(y, fs))
+    y = _sp.upfirdn(g, y, down=sps)
+    return y
