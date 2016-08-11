@@ -16,7 +16,6 @@ on signal processing, communication and underwater acoustics:
    geo
    uwa
    utils
-   common
 
 Special-purpose modules
 -----------------------
