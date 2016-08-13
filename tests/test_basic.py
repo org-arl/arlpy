@@ -206,11 +206,6 @@ class CommsTestSuite(MyTestCase):
         x = comms.fsk(4, 8)
         self.assertEqual(x.shape, (4, 8))
 
-    def test_msk(self):
-        x = comms.msk()
-        self.assertEqual(x.shape, (4, 4))
-        self.assertArrayEqual(x, np.array([[1, 1j, -1, -1j], [1, 1j, -1, 1j], [1, -1j, -1, -1j], [1, -1j, -1, 1j]]))
-
     def test_iqplot(self):
         # no regression test, since this is a graphics utility function
         pass
@@ -232,11 +227,6 @@ class CommsTestSuite(MyTestCase):
         y = comms.modulate(comms.random_data(1000), comms.fsk(2, 4))
         self.assertEqual(len(y), 4000)
         self.assertArrayEqual(np.abs(y), np.ones(4000), precision=4)
-        y = comms.modulate([0, 1, 2, 3], comms.msk())
-        self.assertArrayEqual(y, [1, 1j, -1, -1j, 1, 1j, -1, 1j, 1, -1j, -1, -1j, 1, -1j, -1, 1j], precision=4)
-        y = comms.modulate(x, comms.msk())
-        z = comms.demodulate(y, comms.msk())
-        self.assertArrayEqual(x, z)
         y = comms.modulate(x, comms.pam(m=4, centered=False))
         z = comms.demodulate(-y, comms.pam(m=4, centered=False))
         self.assertArrayEqual(x, z)

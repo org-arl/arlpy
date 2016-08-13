@@ -244,28 +244,6 @@ def fsk(m=2, n=None):
         x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
 
-def msk():
-    """Generate a MSK constellation with 4 baseband samples per 2-bit symbol.
-
-    The concept of signal constellation is generalized to allow vectors to enable
-    representation of FSK as signal points. The signal constellation then becomes
-    a set of vectors, each vector representing the baseband signal to be used when
-    the corresponding symbol is to be transmitted.
-
-    MSK is a special form of a 2-FSK (see :func:`fsk`) constellation that avoids signal
-    discontinuities while achieving better bandwidth efficiency. To do this, MSK uses a
-    time-varying constellation that depends on the earlier bit transmitted. We can avoid
-    the time variation by modeling MSK as a time-invariant constellation with a symbol
-    alphabet size of 4.
-
-    >>> import arlpy
-    >>> x = arlpy.comms.modulate(arlpy.comms.random_data(50, m=4), arlpy.comms.msk())
-    """
-    return _np.array([[1,  1j, -1, -1j],
-                      [1,  1j, -1,  1j],
-                      [1, -1j, -1, -1j],
-                      [1, -1j, -1,  1j]], dtype=_np.complex)
-
 def iqplot(data, spec='.', labels=None):
     """Plot signal points.
 
