@@ -59,7 +59,7 @@ author = u'Mandar Chitre'
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
 # built documents.
-with open ("../VERSION", "r") as myfile:
+with open ("../build/version.txt", "r") as myfile:
   release = myfile.read().replace('\n', '')
 version = release
 
