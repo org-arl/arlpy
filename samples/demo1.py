@@ -1,14 +1,14 @@
-import numpy as np
-import scipy.special
-import matplotlib.pyplot as plt
-
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from arlpy.common import *
+import numpy as np
+import scipy.special
+import matplotlib.pyplot as plt
+
 import arlpy.signal as asig
 from arlpy import comms
+from arlpy.utils import db2mag, mag2db, pow2db
 
 ## BPSK
 
@@ -38,7 +38,7 @@ def tx_bfsk(d):
 def rx_bfsk(x):
     return comms.demodulate(x, comms.fsk())
 
-bfsk = { 'name': 'BFSK', 'tx': tx_bfsk, 'rx': rx_bfsk, 'm': 2, 'n': 2 }
+bfsk = { 'name': 'BFSK', 'tx': tx_bfsk, 'rx': rx_bfsk, 'm': 2, 'n': 4 }
 
 ## MSK
 
@@ -63,19 +63,24 @@ fstop = 0.6*fd
 ebn0 = range(0, 21, 1)
 bits = 100000
 pb = False
+pulse = comms.rrcosfir(0.25, fs/fd)
 
 def run_test(t, ebn0=range(21), syms=1000000):
     ber = []
     for s in ebn0:
+        # eb is divided across n samples, and each symbol has m bits
+        snr_per_sample = s + pow2db(np.log2(t['m'])/t['n'])
         d1 = comms.random_data(syms, t['m'])
         x = t['tx'](d1)
-        assert np.abs(np.std(x)-1) < 0.2
         if pb:
-            x = asig.bb2pb(x, fd, fc, fs)
-            x = comms.awgn(x, s-pow2db(0.5*fs/(2*fstop))-pow2db(t['n'])+pow2db(np.log2(t['m'])))
-            x = asig.pb2bb(x, fs, fc, fd)
+            x = comms.upconvert(x, fs/fd, fc, fs, pulse)
+            # 3 dB extra SNR needed to account for conjugate noise spectrum
+            x = comms.awgn(x, snr_per_sample+3, complex=False)
+            x = comms.downconvert(x, fs/fd, fc, fs, pulse)
+            delay = (len(pulse)-1)/(fs/fd)
+            x = x[delay:-delay]
         else:
-            x = comms.awgn(x, s-pow2db(t['n'])+pow2db(np.log2(t['m'])))
+            x = comms.awgn(x, snr_per_sample, complex=True)
         d2 = t['rx'](x)
         ber.append(comms.ber(d1, d2, t['m']))
     return ebn0, ber
