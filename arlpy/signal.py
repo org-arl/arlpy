@@ -42,7 +42,7 @@ def cw(fc, duration, fs, window=None):
     :param fc: frequency of the pulse in Hz
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
-    :param window: window function to use (`None` means rectangular window)
+    :param window: window function to use (None means rectangular window)
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
@@ -66,7 +66,7 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
     :param method: type of sweep ('linear', 'quadratic', 'logarithmic', 'hyperbolic')
-    :param window: window function to use (`None` means rectangular window)
+    :param window: window function to use (None means rectangular window)
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
@@ -90,7 +90,7 @@ def mseq(spec, n=None):
     """Generate m-sequence.
 
     :param spec: m-sequence specifier (2-30)
-    :param n: length of sequence (`None` means full length of `2^m-1`)
+    :param n: length of sequence (None means full length of `2^m-1`)
 
     >>> import arlpy
     >>> x = arlpy.signal.mseq(7)
@@ -166,7 +166,7 @@ def bb2pb(x, fd, fc, fs=None):
     :param x: complex baseband signal
     :param fd: sampling rate of baseband signal in Hz
     :param fc: carrier frequency in passband in Hz
-    :param fs: sampling rate of passband signal in Hz (`None` => same as `fd`)
+    :param fs: sampling rate of passband signal in Hz (None => same as `fd`)
     :returns: real passband signal, sampled at `fs`
     """
     if fs is None or fs == fd:
@@ -192,9 +192,9 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     :param x: passband signal
     :param fs: sampling rate of passband signal in Hz
     :param fc: carrier frequency in passband in Hz
-    :param fd: sampling rate of baseband signal in Hz (`None` => same as `fs`)
+    :param fd: sampling rate of baseband signal in Hz (None => same as `fs`)
     :param flen: number of taps in the low-pass FIR filter
-    :param cutoff: cutoff frequency in Hz (`None` means auto-select)
+    :param cutoff: cutoff frequency in Hz (None means auto-select)
     :returns: complex baseband signal, sampled at `fd`
     """
     if cutoff is None:

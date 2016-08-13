@@ -46,11 +46,11 @@ def get_data(filename, channel=None, start=0, length=None, detrend='linear'):
     """Load selected data from DTLA recording.
 
     :param filename: name of the datafile
-    :param channel: list of channels to read (base 0, `None` to read all channels)
+    :param channel: list of channels to read (base 0, None to read all channels)
     :param start: sample index to start from
-    :param length: number of samples to read (`None` means read all available samples)
+    :param length: number of samples to read (None means read all available samples)
     :param detrend: processing to be applied to each channel to remove offset/bias
-                    (supported values: `'linear'`, `'constant'`, `None`)
+                    (supported values: `'linear'`, `'constant'`, None)
     """
     if channel is None:
         channel = range(_channels)

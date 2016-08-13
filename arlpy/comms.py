@@ -169,7 +169,7 @@ def psk(m=2, phase0=None, gray=True):
     symbol, assuming the symbols are randomly distributed.
 
     :param m: symbol alphabet size
-    :param phase0: phase of the 0 symbol (`None` => pi/4 for QPSK, 0 otherwise)
+    :param phase0: phase of the 0 symbol (None => pi/4 for QPSK, 0 otherwise)
     :param gray: True to use Gray coding, False otherwise
 
     >>> import arlpy
@@ -225,13 +225,8 @@ def fsk(m=2, n=None):
     a set of vectors, each vector representing the baseband signal to be used when
     the corresponding symbol is to be transmitted.
 
-    If n is not specified, 2m baseband samples are used per symbol. This ensures
-    integral number of transmitted cycles, and avoids discontinuities in the output
-    signal. However, the bandwidth efficiency of this choice is poor. A better
-    bandwidth efficiency can be obtained by using m baseband samples per symbol, but
-    this results in discontinuities that result in frequency leakage. An alternative
-    is to use :func:`msk` instead, since it provides good bandwidth efficiency and
-    avoids the discontinuities.
+    If n is unspecified, 2m baseband samples are generated per symbol. This ensures
+    an integral number of cycles per symbol, and hence continuous phase.
 
     :param m: symbol alphabet size
     :param n: number of baseband samples per symbol
@@ -318,7 +313,7 @@ def demodulate(x, const, metric=None, decision=lambda a: _np.argmin(a, axis=1)):
     :param x: complex baseband signal to demodulate
     :param const: constellation to use
     :param metric: distance metric to use as a measure of closeness of signals
-    :param decision: rule for decision making, `None` to return soft decisions
+    :param decision: rule for decision making, None to return soft decisions
     :returns: demodulated data symbols (or metric in soft decision mode)
 
     The metric is a function that takes in two signal segments and measures a
@@ -332,7 +327,7 @@ def demodulate(x, const, metric=None, decision=lambda a: _np.argmin(a, axis=1)):
 
     The decision rule is a function that takes in the metric of all possible
     constellation points and decides on the demodulated data. By default, this
-    is the argmin function. If the decision rule is set to `None`, no hard decision
+    is the argmin function. If the decision rule is set to None, no hard decision
     is made, and the metric is returned as a "soft decision".
 
     >>> import arlpy
@@ -478,7 +473,7 @@ def rcosfir(beta, sps, span=None):
 
     :param beta: shape of the raised cosine filter (0-1)
     :param sps: number of samples per symbol
-    :param span: length of the filter in symbols (`None` => automatic selection)
+    :param span: length of the filter in symbols (None => automatic selection)
 
     >>> import arlpy
     >>> rc = arlpy.comms.rcosfir(0.25, 6)
@@ -506,7 +501,7 @@ def rrcosfir(beta, sps, span=None):
 
     :param beta: shape of the root raised cosine filter (0-1)
     :param sps: number of samples per symbol
-    :param span: length of the filter in symbols (`None` => automatic selection)
+    :param span: length of the filter in symbols (None => automatic selection)
 
     >>> import arlpy
     >>> rrc = arlpy.comms.rrcosfir(0.25, 6)
@@ -542,7 +537,7 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     passband conversion (but without pulse shaping), see :func:`arlpy.signal.bb2pb`.
 
     If the carrier frequency is 0, the upsampled (at passband sampling rate) and
-    pulse shaped complex baseband data is returned. If the pulse shape is `None`,
+    pulse shaped complex baseband data is returned. If the pulse shape is None,
     a rectangular pulse shape is assumed.
 
     The upconversion process introduces a group delay depending on the pulse shaping
@@ -575,7 +570,7 @@ def downconvert(x, sps, fc, fs=2.0, g=None):
     baseband conversion (but without matched filtering), see :func:`arlpy.signal.pb2bb`.
 
     If the carrier frequency is 0, the input is assumed to be complex baseband, and only
-    undergoes matched filtering and downsampling. If the pulse shape is `None`, a
+    undergoes matched filtering and downsampling. If the pulse shape is None, a
     rectangular pulse shape is assumed.
 
     The downconversion process introduces a group delay depending on the matched
