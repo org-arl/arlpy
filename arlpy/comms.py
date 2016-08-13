@@ -320,7 +320,7 @@ def demodulate(x, const, metric=None, decision=lambda a: _np.argmin(a, axis=1)):
         if const.ndim == 2:
             # multi-dimensional constellation => matched filter
             m, n = const.shape
-            metric = lambda a, b: -_np.abs(_np.sum(_np.expand_dims(_np.reshape(a,(len(x)/n, n)), axis=2) * b.conj().T, axis=1))
+            metric = lambda a, b: -_np.real(_np.sum(_np.expand_dims(_np.reshape(a, (len(x)/n, n)), axis=2) * b.conj().T, axis=1))
         elif _np.all(_np.abs(const.imag) < 1e-6) and _np.all(const.real >= 0):
             # all real constellation => incoherent distance
             metric = lambda a, b: _np.abs(_np.abs(a)-b)
