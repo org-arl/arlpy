@@ -15,4 +15,5 @@ install:
 	python setup.py install
 
 clean:
+	rm -rf *.pyc
 	rm -rf build

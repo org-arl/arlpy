@@ -402,12 +402,13 @@ def diff_decode(x):
     y[1:] *= x[:-1].conj()
     return y[1:]
 
-def awgn(x, snr, measured=False):
+def awgn(x, snr, measured=False, complex=None):
     """Add Gaussian noise to signal.
 
     :param x: real passband or complex baseband signal
     :param snr: SNR in dB
     :param measured: True to measure signal strength, False to assume unit strength signal
+    :param complex: True for complex noise, False for real noise, None to automatically decide
 
     >>> import arlpy
     >>> d1 = arlpy.comms.random_data(100, 4)
@@ -420,7 +421,9 @@ def awgn(x, snr, measured=False):
     """
     signal = _np.std(x) if measured else 1.0
     noise = signal * _np.power(10, -snr/20.0)
-    if x.dtype == _np.complex:
+    if complex is None:
+        complex = (x.dtype == _np.complex)
+    if complex:
         noise /= _sqrt(2)
         y = x + _np.random.normal(0, noise, _np.shape(x)) + 1j*_np.random.normal(0, noise, _np.shape(x))
     else:
