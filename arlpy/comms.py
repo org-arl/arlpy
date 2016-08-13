@@ -139,7 +139,7 @@ def pam(m=2, gray=True, centered=True):
 
     The constellation represents the baseband values for symbols 0 through m-1
     respectively. The constellation is scaled for unit average energy per
-    symbol, assuming the symbols are randomly distributed.
+    sample, assuming the symbols are randomly distributed.
 
     :param m: symbol alphabet size
     :param gray: True to use Gray coding, False otherwise
@@ -166,7 +166,7 @@ def psk(m=2, phase0=None, gray=True):
 
     The constellation represents the baseband values for symbols 0 through m-1
     respectively. The constellation is scaled for unit average energy per
-    symbol, assuming the symbols are randomly distributed.
+    sample, assuming the symbols are randomly distributed.
 
     :param m: symbol alphabet size
     :param phase0: phase of the 0 symbol (None => pi/4 for QPSK, 0 otherwise)
@@ -191,7 +191,7 @@ def qam(m=16, gray=True):
 
     The constellation represents the baseband values for symbols 0 through m-1
     respectively. The constellation is scaled for unit average energy per
-    symbol, assuming the symbols are randomly distributed.
+    sample, assuming the symbols are randomly distributed.
 
     :param m: symbol alphabet size (must be a square of an integer)
     :param gray: True to use Gray coding, False otherwise
@@ -224,6 +224,9 @@ def fsk(m=2, n=None):
     representation of FSK as signal points. The signal constellation then becomes
     a set of vectors, each vector representing the baseband signal to be used when
     the corresponding symbol is to be transmitted.
+
+    The constellation is scaled for unit average energy per sample, assuming the
+    symbols are randomly distributed.
 
     If n is unspecified, 2m baseband samples are generated per symbol. This ensures
     an integral number of cycles per symbol, and hence continuous phase.

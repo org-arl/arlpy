@@ -16,4 +16,4 @@ install:
 
 clean:
 	rm -rf *.pyc
-	rm -rf build
+	rm -rf build arlpy.egg-info dist

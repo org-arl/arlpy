@@ -1,6 +1,0 @@
-## module dependencies
-numpy
-scipy
-utm
-nose
-sphinx
