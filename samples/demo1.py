@@ -1,10 +1,13 @@
+##########################################################################
+# demo program to simulate BER for PSK and FSK and compare against theory
+##########################################################################
+
 import numpy as np
 import scipy.special
 import matplotlib.pyplot as plt
 
-import arlpy.signal as asig
 from arlpy import comms
-from arlpy.utils import db2mag, mag2db, pow2db
+from arlpy.utils import db2mag, pow2db
 
 ## settings
 

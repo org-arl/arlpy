@@ -18,5 +18,5 @@ install:
 	python setup.py install
 
 clean:
-	rm -rf *.pyc
+	find . -name *.pyc -exec rm {} \;
 	rm -rf build arlpy.egg-info dist
