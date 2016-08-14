@@ -136,6 +136,28 @@ class SignalTestSuite(MyTestCase):
         hb = np.array([0, 0, 1, 0], dtype=np.float)
         self.assertArrayEqual(x, signal.lfilter0(hb, 1, x))
 
+    def test_lfilter_gen(self):
+        x = np.random.normal(0, 1, 1000)
+        hb = np.array([0, 0, 1, 0], dtype=np.float)
+        f = signal.lfilter_gen(hb, 1)
+        y = [f.send(v) for v in x]
+        self.assertArrayEqual(np.append([0, 0], x[:-2]), y)
+        hb, ha = sp.iirfilter(4, 0.01, btype='lowpass')
+        y1 = sp.lfilter(hb, ha, x)
+        f = signal.lfilter_gen(hb, ha)
+        y2 = [f.send(v) for v in x]
+        self.assertArrayEqual(y1, y2, precision=6)
+
+    def test_nco(self):
+        nco = signal.nco_gen(27000, 108000, func=np.sin)
+        x = [nco.next() for i in range(12)]
+        x = np.append(x, nco.send(54000))
+        x = np.append(x, [nco.next() for i in range(4)])
+        self.assertArrayEqual(x, [0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 1, -1, 1, -1, 1], precision=6)
+        fc = np.append([27000]*12, [54000]*5)
+        x = signal.nco(fc, 108000, func=np.sin)
+        self.assertArrayEqual(x, [0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 1, -1, 1, -1, 1], precision=6)
+
 class CommsTestSuite(MyTestCase):
 
     def test_random_data(self):
