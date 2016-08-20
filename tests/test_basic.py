@@ -33,6 +33,10 @@ class UtilsTestSuite(MyTestCase):
         self.assertEqual(utils.pow2db(100.0), 20.0)
         self.assertEqual(utils.db2pow(20.0), 100.0)
 
+    def test_linspace2d(self):
+        x = utils.linspace2d(0, 1, 2, 0, 1, 3)
+        self.assertArrayEqual(x, [[0,  0], [0,  0.5], [0,  1], [1,  0], [1,  0.5], [1,  1]])
+
 class GeoTestSuite(MyTestCase):
 
     def test_pos(self):
