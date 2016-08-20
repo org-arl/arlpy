@@ -12,7 +12,7 @@ import unittest
 import numpy as np
 import scipy.signal as sp
 
-from .context import utils, geo, uwa, signal, comms
+from .context import utils, geo, uwa, signal, comms, bf
 
 class MyTestCase(unittest.TestCase):
 
@@ -311,6 +311,27 @@ class CommsTestSuite(MyTestCase):
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -40)
         self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
         self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
+
+class BeamformerTestSuite(MyTestCase):
+
+    def test_normalize(self):
+        x = np.empty((1024, 10), dtype=np.complex)
+        for i in range(10):
+            x[:, i] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
+        y = bf.normalize(x)
+        self.assertArrayEqual(np.mean(y, axis=0), np.zeros(10), precision=6)
+        self.assertArrayEqual(np.var(y, axis=0), [0, 1, 1, 1, 1, 1, 1, 1, 1, 1], precision=6)
+
+    def test_stft(self):
+        x = np.ones((1024, 5))
+        y = bf.stft(x, 64)
+        self.assertEqual(y.shape, (16, 64, 5))
+        self.assertArrayEqual(y[:,0,:], 64*np.ones((16, 5)))
+        self.assertArrayEqual(y[:,1:,:], np.zeros((16, 63, 5)))
+        y = bf.stft(x, 64, window='hanning')
+        self.assertEqual(y.shape, (16, 64, 5))
+        self.assertArrayEqual(y[:,0,:], 32*np.ones((16, 5)), precision=0)
+        self.assertArrayEqual(y[0,:,0], np.fft.fft(sp.get_window('hanning', 64)))
 
 if __name__ == '__main__':
     unittest.main()
