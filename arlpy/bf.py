@@ -63,9 +63,9 @@ def steering(pos, theta):
     sensor position. In case of planar arrays, if only 2 coordinates are provided, these coordinates
     are assumed to be y and z.
 
-    :param pos: sensor positions
-    :param theta: steering directions
-    :returns: steering distances with a column for each direction
+    :param pos: sensor positions (m)
+    :param theta: steering directions (radians)
+    :returns: steering distances (m) with a column for each direction
 
     >>> import numpy as np
     >>> from arlpy import bf, utils
@@ -94,7 +94,7 @@ def steering(pos, theta):
         dist = _np.dot(pos, dvec)
     return -dist
 
-def bartlett(x, fc, c, sd, complex_output=False):
+def bartlett(x, fc, c, sd, shading=None, complex_output=False):
     """Bartlett beamformer.
 
     The array data must be 2D with baseband time series for each sensor in
@@ -108,9 +108,10 @@ def bartlett(x, fc, c, sd, complex_output=False):
     :func:`broadband` function instead.
 
     :param x: array data
-    :param fc: carrier frequency for the array data
-    :param c: wave propagation speed
-    :param sd: steering distances
+    :param fc: carrier frequency for the array data (Hz)
+    :param c: wave propagation speed (m/s)
+    :param sd: steering distances (m)
+    :param shading: window function to use for array shading (None means no shading)
     :param complex_output: True for complex signal, False for beamformed power
     :returns: beamformer output with time as the first axis, and steering directions as the other
 
@@ -128,7 +129,10 @@ def bartlett(x, fc, c, sd, complex_output=False):
         a = _np.ones_like(sd)
     else:
         wavelength = float(c)/fc
-        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
+    if shading is not None:
+        s = _sig.get_window(shading, a.shape[0])
+        a *= s[:,_np.newaxis]/_np.sqrt(_np.mean(s**2))
     bfo = _np.dot(x, a.conj())
     return bfo if complex_output else _np.abs(bfo)**2
 
@@ -146,9 +150,9 @@ def capon(x, fc, c, sd, complex_output=False):
     :func:`broadband` function instead.
 
     :param x: array data
-    :param fc: carrier frequency for the array data
-    :param c: wave propagation speed
-    :param sd: steering distances
+    :param fc: carrier frequency for the array data (Hz)
+    :param c: wave propagation speed (m/s)
+    :param sd: steering distances (m)
     :param complex_output: True for complex signal, False for beamformed power
     :returns: beamformer output with time as the first axis, and steering directions as the other
 
@@ -166,7 +170,7 @@ def capon(x, fc, c, sd, complex_output=False):
         w = _np.ones_like(sd)
     else:
         wavelength = float(c)/fc
-        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
         # TODO compute w
     bfo = _np.dot(x, w.conj())
     return bfo if complex_output else _np.abs(bfo)**2
@@ -189,11 +193,11 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     half the frequency components are computed.
 
     :param x: array data
-    :param fs: sampling rate for array data
-    :param c: wave propagation speed
+    :param fs: sampling rate for array data (Hz)
+    :param c: wave propagation speed (m/s)
     :param nfft: STFT window size
-    :param sd: steering distances
-    :param f0: carrier frequency (for baseband data)
+    :param sd: steering distances (m)
+    :param f0: carrier frequency (for baseband data) (Hz)
     :param beamformer: narrowband beamformer to use
     :param complex_output: True for complex signal, False for beamformed power
     :returns: beamformer output with time as the first axis, and steering directions as the other

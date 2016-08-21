@@ -367,6 +367,9 @@ class BeamformerTestSuite(MyTestCase):
         x = bf.bartlett(np.ones(11), 1500, 1500, sd)
         self.assertEqual(x.shape, (1, 181))
         self.assertEqual(np.argmax(x[0,:]), 90)
+        x = bf.bartlett(np.ones(11), 1500, 1500, sd, shading='hanning')
+        self.assertEqual(x.shape, (1, 181))
+        self.assertEqual(np.argmax(x[0,:]), 90)
         y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
         x = bf.bartlett(y, 1500, 1500, sd)
         self.assertEqual(np.argmax(x[0,:]), 135)
