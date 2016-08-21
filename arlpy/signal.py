@@ -33,7 +33,7 @@ def time(n, fs):
          4.99988000e-01,   4.99992000e-01,   4.99996000e-01])
     """
     if hasattr(n, "__len__"):
-        n = len(n)
+        n = _np.asarray(n).shape[0]
     return _np.arange(n, dtype=_np.float)/fs
 
 def cw(fc, duration, fs, window=None):
@@ -173,8 +173,11 @@ def bb2pb(x, fd, fc, fs=None):
         y = _np.array(x, dtype=_np.complex)
         fs = fd
     else:
-        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd)
-    y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
+        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd, axis=0)
+    osc = _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
+    if y.ndim == 2:
+        osc = osc[:,_np.newaxis]
+    y *= osc
     return y.real
 
 def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
@@ -199,9 +202,12 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     """
     if cutoff is None:
         cutoff = 0.6*fd if fd is not None else 1.1*fc
-    y = x * _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
+    osc = _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
+    if x.ndim == 2:
+        osc = osc[:,_np.newaxis]
+    y = x * osc
     hb = _sig.firwin(flen, cutoff=cutoff, nyq=fs/2.0)
-    y = _sig.filtfilt(hb, 1, y)
+    y = _sig.filtfilt(hb, 1, y, axis=0)
     if fd is not None and fd != fs:
         y = _sig.resample_poly(y, 2*fd, fs)[::2]
     return y
