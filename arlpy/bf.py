@@ -58,9 +58,10 @@ def steering(pos, theta):
     planar and 3D arrays, theta is a 2D array with an (azimuth, elevation) pair in each row.
     Such arrays can be easily generated using the :func:`arlpy.utils.linspace2d` function.
 
-    The broadside direction is along the x-axis of a right handed coordinate system with z-axis pointing
-    upwards, and has azimuth and elevation as 0. If only 2 coordinates are provided for planar/3D arrays,
-    these coordinates are assumed to be y and z.
+    The broadside direction is along the x-axis of a right-handed coordinate system with z-axis pointing
+    upwards, and has azimuth and elevation as 0. In case of linear arrays, the y-coordinate is the
+    sensor position. In case of planar arrays, if only 2 coordinates are provided, these coordinates
+    are assumed to be y and z.
 
     :param pos: sensor positions
     :param theta: steering directions
@@ -91,7 +92,7 @@ def steering(pos, theta):
         elev = theta[:,1]
         dvec = _np.array([_np.cos(elev)*_np.cos(azim), _np.cos(elev)*_np.sin(azim), _np.sin(elev)])
         dist = _np.dot(pos, dvec)
-    return dist
+    return -dist
 
 def bartlett(x, fc, c, sd, complex_output=False):
     """Bartlett beamformer.
@@ -185,7 +186,7 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     propagation speed) is much larger than the aperture size of the array.
 
     If the array data is real and f0 is zero, the data is assumed to be passband and so only
-    the positive frequency components are computed.
+    half the frequency components are computed.
 
     :param x: array data
     :param fs: sampling rate for array data
@@ -208,6 +209,6 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     bfo = _np.zeros((x.shape[0], sd.shape[1], nfft/nyq), dtype=_np.complex if complex_output else _np.float)
     for i in range(nfft/nyq):
         f = i if i < nfft/2 else i-nfft
-        f = f0 - f*float(fs)/nfft
+        f = f0 + f*float(fs)/nfft
         bfo[:,:,i] = beamformer(x[:,i,:], f, c, sd, complex_output=complex_output)
     return bfo if complex_output else _np.sum(bfo, axis=2)

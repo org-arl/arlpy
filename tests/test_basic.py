@@ -344,34 +344,34 @@ class BeamformerTestSuite(MyTestCase):
         self.assertArrayEqual(x, np.zeros((11, 1)))
         x = bf.steering(np.linspace(0, 5, 11), [-np.pi/2, np.pi/4])
         self.assertEqual(x.shape, (11, 2))
-        self.assertArrayEqual(x[:,0], np.linspace(2.5, -2.5, 11))
-        self.assertArrayEqual(x[:,1], np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
+        self.assertArrayEqual(x[:,0], -np.linspace(2.5, -2.5, 11))
+        self.assertArrayEqual(x[:,1], -np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
         pos = [[0.0, 0], [0.5, 0], [1.0, 0], [1.5, 0], [2.0, 0]]
         x = bf.steering(pos, [[-np.pi/2, 0], [np.pi/4, 0]])
         self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2))
+        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0, 0.0], [0, 0.5], [0, 1.0], [0, 1.5], [0, 2.0]]
         x = bf.steering(pos, [[0, -np.pi/2], [0, np.pi/4]])
         self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2))
+        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0.0, 0, 0], [0.5, 0, 0], [1.0, 0, 0], [1.5, 0, 0], [2.0, 0, 0]]
         x = bf.steering(pos, [[np.pi, 0], [np.pi/4, 0]])
         self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
+        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
 
     def test_bartlett(self):
         sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
         x = bf.bartlett(np.ones(11), 1500, 1500, sd)
         self.assertEqual(x.shape, (1, 181))
         self.assertEqual(np.argmax(x[0,:]), 90)
-        y = np.exp(-2j*np.pi*np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
+        y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
         x = bf.bartlett(y, 1500, 1500, sd)
         self.assertEqual(np.argmax(x[0,:]), 135)
-        z = signal.cw(1500, 1, 8485)        # create 1.5 kHz signal
-        y = np.zeros((z.shape[0], 11))      # from -45 deg azimuth angle
+        z = signal.cw(1500, 1, 8485)                          # 1.5 kHz passband signal from -45 deg
+        y = np.zeros((z.shape[0], 11))
         for i in range(11):
             y[2*i:-1,i] = z[:-2*i-1]
         y1 = signal.pb2bb(y, 8485, 1500, 1000)

@@ -163,6 +163,8 @@ def bb2pb(x, fd, fc, fs=None):
     For communication applications, one may wish to use :func:`arlpy.comms.upconvert` instead,
     as that function supports pulse shaping.
 
+    The convention used in that exp(2j*pi*fc*t) is a positive frequency carrier.
+
     :param x: complex baseband signal
     :param fd: sampling rate of baseband signal in Hz
     :param fc: carrier frequency in passband in Hz
@@ -174,7 +176,7 @@ def bb2pb(x, fd, fc, fs=None):
         fs = fd
     else:
         y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd, axis=0)
-    osc = _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
+    osc = _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(y,fs))
     if y.ndim == 2:
         osc = osc[:,_np.newaxis]
     y *= osc
@@ -192,6 +194,8 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     as that function supports matched filtering with a pulse shape rather than a generic
     low-pass filter.
 
+    The convention used in that exp(2j*pi*fc*t) is a positive frequency carrier.
+
     :param x: passband signal
     :param fs: sampling rate of passband signal in Hz
     :param fc: carrier frequency in passband in Hz
@@ -201,8 +205,8 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     :returns: complex baseband signal, sampled at `fd`
     """
     if cutoff is None:
-        cutoff = 0.6*fd if fd is not None else 1.1*fc
-    osc = _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
+        cutoff = 0.6*fd if fd is not None else 1.1*_np.abs(fc)
+    osc = _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(x,fs))
     if x.ndim == 2:
         osc = osc[:,_np.newaxis]
     y = x * osc
