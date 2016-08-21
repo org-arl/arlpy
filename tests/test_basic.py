@@ -362,5 +362,35 @@ class BeamformerTestSuite(MyTestCase):
         self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
         self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
 
+    def test_bartlett(self):
+        sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
+        x = bf.bartlett(np.ones(11), 1500, 1500, sd)
+        self.assertEqual(x.shape, (1, 181))
+        self.assertEqual(np.argmax(x[0,:]), 90)
+        y = np.exp(-2j*np.pi*np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
+        x = bf.bartlett(y, 1500, 1500, sd)
+        self.assertEqual(np.argmax(x[0,:]), 135)
+        z = signal.cw(1500, 1, 8485)        # create 1.5 kHz signal
+        y = np.zeros((z.shape[0], 11))      # from -45 deg azimuth angle
+        for i in range(11):
+            y[2*i:-1,i] = z[:-2*i-1]
+        y1 = signal.pb2bb(y, 8485, 1500, 1000)
+        x = bf.bartlett(y1, 1500, 1500, sd)
+        self.assertEqual(x.shape, (1000, 181))
+        self.assertEqual(np.argmax(x[10,:]), 45)
+        x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500, complex_output=True)
+        self.assertEqual(x.shape, (250, 181, 4))
+        x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500)
+        self.assertEqual(x.shape, (250, 181))
+        self.assertEqual(np.argmax(x[10,:]), 45)
+        x = bf.broadband(y, 8485, 1500, 256, sd, complex_output=True)
+        self.assertEqual(x.shape, (33, 181, 128))
+        x = bf.broadband(y, 8485, 1500, 256, sd)
+        self.assertEqual(x.shape, (33, 181))
+        self.assertEqual(np.argmax(x[10,:]), 45)
+        y1 = signal.pb2bb(y, 8485, 1250, 1000)
+        x = bf.broadband(y1, 1000, 1500, 16, sd, f0=1250)
+        self.assertEqual(np.argmax(x[10,:]), 45)
+
 if __name__ == '__main__':
     unittest.main()

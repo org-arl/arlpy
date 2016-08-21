@@ -100,7 +100,10 @@ def bartlett(x, fc, c, sd, complex_output=False):
     individual columns. The steering vectors must also be 2D with a column per
     steering direction, as produced by the :func:`steering` function.
 
-    The data is assumed to be narrowband. If broadband beamforming is desired, use the
+    If the array data is specified as 1D array, it is assumed to represent multiple sensors
+    at a single time.
+
+    The array data is assumed to be narrowband. If broadband beamforming is desired, use the
     :func:`broadband` function instead.
 
     :param x: array data
@@ -116,10 +119,15 @@ def bartlett(x, fc, c, sd, complex_output=False):
     >>> # sensor positions assumed to be in pos
     >>> y = bf.bartlett(x, 1000, 1500, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
+    if x.ndim == 1:
+        x = x[_np.newaxis,:]
     if x.shape[1] != sd.shape[0]:
         raise ValueError('Sensor count mismatch in data and steering vector')
-    wavelength = float(c)/fc
-    a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
+    if fc == 0:
+        a = _np.ones_like(sd)
+    else:
+        wavelength = float(c)/fc
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
     bfo = _np.dot(x, a.conj())
     return bfo if complex_output else _np.abs(bfo)**2
 
@@ -130,7 +138,10 @@ def capon(x, fc, c, sd, complex_output=False):
     individual columns. The steering vectors must also be 2D with a column per
     steering direction, as produced by the :func:`steering` function.
 
-    The data is assumed to be narrowband. If broadband beamforming is desired, use the
+    If the array data is specified as 1D array, it is assumed to represent multiple sensors
+    at a single time.
+
+    The array data is assumed to be narrowband. If broadband beamforming is desired, use the
     :func:`broadband` function instead.
 
     :param x: array data
@@ -146,15 +157,20 @@ def capon(x, fc, c, sd, complex_output=False):
     >>> # sensor positions assumed to be in pos
     >>> y = bf.capon(x, 1000, 1500, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
+    if x.ndim == 1:
+        x = x[_np.newaxis,:]
     if x.shape[1] != sd.shape[0]:
         raise ValueError('Sensor count mismatch in data and steering vector')
-    wavelength = float(c)/fc
-    a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
-    # TODO compute w
+    if fc == 0:
+        w = _np.ones_like(sd)
+    else:
+        wavelength = float(c)/fc
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
+        # TODO compute w
     bfo = _np.dot(x, w.conj())
     return bfo if complex_output else _np.abs(bfo)**2
 
-def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett):
+def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=False):
     """Broadband beamformer.
 
     The broadband beamformer is implementing by taking STFT of the data, applying narrowband
@@ -168,6 +184,9 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett):
     The STFT window size should be chosen such that the corresponding distance (based on wave
     propagation speed) is much larger than the aperture size of the array.
 
+    If the array data is real and f0 is zero, the data is assumed to be passband and so only
+    the positive frequency components are computed.
+
     :param x: array data
     :param fs: sampling rate for array data
     :param c: wave propagation speed
@@ -175,6 +194,7 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett):
     :param sd: steering distances
     :param f0: carrier frequency (for baseband data)
     :param beamformer: narrowband beamformer to use
+    :param complex_output: True for complex signal, False for beamformed power
     :returns: beamformer output with time as the first axis, and steering directions as the other
 
     >>> from arlpy import bf
@@ -183,9 +203,11 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett):
     >>> sd = bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> y = bf.broadband(x, fs, 256, sd, beamformer=capon)
     """
+    nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft)
-    bfo = _np.zeros((x.shape[0], sd.shape[0]))
-    for i in range(nfft):
-        f = f0 + i * float(fs)/nfft
-        bfo += beamformer(x[:,i,:], f, c, sd, complex_output=False)
-    return bfo
+    bfo = _np.zeros((x.shape[0], sd.shape[1], nfft/nyq), dtype=_np.complex if complex_output else _np.float)
+    for i in range(nfft/nyq):
+        f = i if i < nfft/2 else i-nfft
+        f = f0 - f*float(fs)/nfft
+        bfo[:,:,i] = beamformer(x[:,i,:], f, c, sd, complex_output=complex_output)
+    return bfo if complex_output else _np.sum(bfo, axis=2)
