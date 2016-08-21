@@ -395,5 +395,16 @@ class BeamformerTestSuite(MyTestCase):
         x = bf.broadband(y1, 1000, 1500, 16, sd, f0=1250)
         self.assertEqual(np.argmax(x[10,:]), 45)
 
+    def test_bartlett_beampattern(self):
+        sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
+        x = bf.bartlett_beampattern(90, 1500, 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 90)
+        self.assertApproxEqual(x[90], 1.0, precision=6)
+        x = bf.bartlett_beampattern(135, 1500, 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 135)
+        self.assertApproxEqual(x[135], 1.0, precision=6)
+
 if __name__ == '__main__':
     unittest.main()

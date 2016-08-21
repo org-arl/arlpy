@@ -136,6 +136,35 @@ def bartlett(x, fc, c, sd, shading=None, complex_output=False):
     bfo = _np.dot(x, a.conj())
     return bfo if complex_output else _np.abs(bfo)**2
 
+def bartlett_beampattern(i, fc, c, sd, shading=None):
+    """Computes the beampattern for a Bartlett beamformer.
+
+    :param i: column index of target steering distances
+    :param fc: carrier frequency for the array data (Hz)
+    :param c: wave propagation speed (m/s)
+    :param sd: steering distances (m)
+    :param shading: window function to use for array shading (None means no shading)
+    :returns: beampattern power response at all directions corresponding to columns in sd
+
+    >>> from arlpy import bf
+    >>> import matplotlib.pyplot as plt
+    >>> import numpy as np
+    >>> sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
+    >>> bp = bf.bartlett_beampattern(90, 1500, 1500, sd)
+    >>> plt.plot(np.linspace(-90, 90, 181), 20*np.log10(bp))
+    >>> plt.xlabel('Angle (deg)')
+    >>> plt.ylabel('Response (dB)')
+    >>> plt.axis([-90, 90, -80, 5])
+    >>> plt.grid()
+    >>> plt.show()
+    """
+    wavelength = float(c)/fc
+    a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
+    if shading is not None:
+        s = _sig.get_window(shading, a.shape[0])
+        a *= s[:,_np.newaxis]/_np.sqrt(_np.mean(s**2))
+    return _np.abs(_np.dot(a[:,i].conj(), a))**2
+
 def capon(x, fc, c, sd, complex_output=False):
     """Capon beamformer.
 
