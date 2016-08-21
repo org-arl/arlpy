@@ -339,5 +339,28 @@ class BeamformerTestSuite(MyTestCase):
         self.assertArrayEqual(y[:,0,:], 32*np.ones((16, 5)), precision=0)
         self.assertArrayEqual(y[0,:,0], np.fft.fft(sp.get_window('hanning', 64)))
 
+    def test_steering(self):
+        x = bf.steering(np.linspace(0, 5, 11), 0)
+        self.assertArrayEqual(x, np.zeros((11, 1)))
+        x = bf.steering(np.linspace(0, 5, 11), [-np.pi/2, np.pi/4])
+        self.assertEqual(x.shape, (11, 2))
+        self.assertArrayEqual(x[:,0], np.linspace(2.5, -2.5, 11))
+        self.assertArrayEqual(x[:,1], np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
+        pos = [[0.0, 0], [0.5, 0], [1.0, 0], [1.5, 0], [2.0, 0]]
+        x = bf.steering(pos, [[-np.pi/2, 0], [np.pi/4, 0]])
+        self.assertEqual(x.shape, (5, 2))
+        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2))
+        pos = [[0, 0.0], [0, 0.5], [0, 1.0], [0, 1.5], [0, 2.0]]
+        x = bf.steering(pos, [[0, -np.pi/2], [0, np.pi/4]])
+        self.assertEqual(x.shape, (5, 2))
+        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2))
+        pos = [[0.0, 0, 0], [0.5, 0, 0], [1.0, 0, 0], [1.5, 0, 0], [2.0, 0, 0]]
+        x = bf.steering(pos, [[np.pi, 0], [np.pi/4, 0]])
+        self.assertEqual(x.shape, (5, 2))
+        self.assertArrayEqual(x[:,0], np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[:,1], np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
+
 if __name__ == '__main__':
     unittest.main()

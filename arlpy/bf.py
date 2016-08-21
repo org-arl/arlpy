@@ -57,7 +57,10 @@ def steering(pos, theta):
     For linear arrays, theta is a 1D array of angles (in radians) with 0 being broadside. For
     planar and 3D arrays, theta is a 2D array with an (azimuth, elevation) pair in each row.
     Such arrays can be easily generated using the :func:`arlpy.utils.linspace2d` function.
-    The broadside direction is along the z-axis, and has azimuth and elevation as 0.
+
+    The broadside direction is along the x-axis of a right handed coordinate system with z-axis pointing
+    upwards, and has azimuth and elevation as 0. If only 2 coordinates are provided for planar/3D arrays,
+    these coordinates are assumed to be y and z.
 
     :param pos: sensor positions
     :param theta: steering directions
@@ -83,10 +86,10 @@ def steering(pos, theta):
             raise ValueError('Sensor positions must be either 2d or 3d vectors')
         pos -= _np.mean(pos, axis=0)
         if pos.shape[1] == 2:
-            pos = _np.c_[pos, _np.zeros(pos.shape[0])]
+            pos = _np.c_[_np.zeros(pos.shape[0]), pos]
         azim = theta[:,0]
         elev = theta[:,1]
-        dvec = _np.array([-_np.sin(azim)*_np.cos(elev), _np.sin(elev), _np.cos(azim)*_np.cos(elev)])
+        dvec = _np.array([_np.cos(elev)*_np.cos(azim), _np.cos(elev)*_np.sin(azim), _np.sin(elev)])
         dist = _np.dot(pos, dvec)
     return dist
 
