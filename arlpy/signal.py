@@ -209,8 +209,8 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
 def mfilter(s, x, axis=0, complex_output=False):
     """Matched filter recevied signal using a reference signal.
 
-    :param s: recevied signal
-    :param x: reference signal
+    :param s: reference signal
+    :param x: recevied signal
     :param axis: axis of the signal, if multiple signals specified
     :param complex_output: True to return complex signal, False for absolute value of complex signal
     """
