@@ -89,7 +89,14 @@ def envelope(x):
 def mseq(spec, n=None):
     """Generate m-sequence.
 
-    :param spec: m-sequence specifier (2-30)
+    m-sequences are sequences of +1/-1 values with near-perfect discrete periodic
+    auto-correlation properties. All non-zero lag periodic auto-correlations
+    are -1. The zero-lag autocorrelation is 2^m-1, where m is the shift register
+    length.
+
+    This function currently supports shift register lengths between 2 and 30.
+
+    :param spec: m-sequence specifier (shift register length or taps)
     :param n: length of sequence (None means full length of `2^m-1`)
 
     >>> import arlpy
@@ -98,6 +105,8 @@ def mseq(spec, n=None):
     127
     """
     if isinstance(spec, int):
+        if spec < 2 or spec > 30:
+            raise ValueError('spec must be between 2 and 30')
         known_specs = {  # known m-sequences are specified as base 1 taps
              2: [1,2],          3: [1,3],          4: [1,4],          5: [2,5],
              6: [1,6],          7: [1,7],          8: [1,2,7,8],      9: [4,9],
@@ -121,6 +130,35 @@ def mseq(spec, n=None):
         out[j] = float(2*reg[0]-1)
         reg[0] = b
     return out
+
+def gmseq(spec, theta=None):
+    """Generate generalized m-sequence.
+
+    Generalized m-sequences are related to m-sequences but have an additional parameter
+    theta. When theta = pi/2, generalized m-sequences become normal m-sequences. When
+    theta < pi/2, generalized m-sequences contain a DC-component that leads to an exalted
+    carrier after modulation.
+
+    When theta is arctan(sqrt(n)) where n is the length of the m-sequence, the m-sequence
+    is considered to be period matched. Period matched m-sequences are complex sequences
+    with perfect discrete periodic auto-correlation properties, i.e., all non-zero lag
+    periodic auto-correlations are zero. The zero-lag autocorrelation is n = 2^m-1, where
+    m is the shift register length.
+
+    This function currently supports shift register lengths between 2 and 30.
+
+    :param spec: m-sequence specifier (shift register length or taps)
+    :param theta: transmission angle (None to use period-matched angle)
+
+    >>> import arlpy
+    >>> x = arlpy.signal.gmseq(7)
+    >>> len(x)
+    127
+    """
+    x = mseq(spec)
+    if theta is None:
+        theta = _np.arctan(_np.sqrt(len(x)))
+    return _np.cos(theta) + 1j*_np.sin(theta)*x
 
 def freqz(b, a=1, fs=2.0, worN=None, whole=False):
     """Plot frequency response of a filter.
