@@ -389,3 +389,22 @@ def nco(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):
     p[0] = phase0
     p = _np.mod(_np.cumsum(p), wrap)
     return p if func is None else func(p)
+
+def correlate_periodic(a, v=None):
+    """Cross-correlation of two 1-dimensional periodic sequences.
+
+    a and v must be sequences with the same length. If v is not specified, it is
+    assumed to be the same as a (i.e. the function computes auto-correlation).
+
+    :param a, v: input sequences
+    :returns: discrete periodic cross-correlation of a and v
+    """
+    a_fft = _np.fft.fft(_np.asarray(a))
+    if v is None:
+        v_cfft = a_fft.conj()
+    else:
+        v_cfft = _np.fft.fft(_np.asarray(v)).conj()
+    x = _np.fft.ifft(a_fft * v_cfft)
+    if _np.isrealobj(a) and (v is None or _np.isrealobj(v)):
+        x = x.real
+    return x
