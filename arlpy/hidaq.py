@@ -53,7 +53,7 @@ def get_data(filename, channel=None, start=0, length=None, detrend=None):
     :param start: sample index to start from
     :param length: number of samples to read (None means read all available samples)
     :param detrend: processing to be applied to each channel to remove offset/bias
-                    (supported values: `'linear'`, `'constant'`, None)
+                    (supported values: ``'linear'``, ``'constant'``, ``None``)
     """
     if channel is None:
         channel = range(_channels)

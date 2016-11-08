@@ -80,7 +80,7 @@ def latlong(pos, zone):
     """Convert UTM position to latitude/longitude.
 
     To convert a local position into a global latitude/longitude, the local coordinate
-    system has to be specified in terms of a UTM zone 2-tuple, e.g. `(32, 'U')`.
+    system has to be specified in terms of a UTM zone 2-tuple, e.g. ``(32, 'U')``.
     """
     geo = _utm.to_latlon(pos[0], pos[1], zone[0], zone[1])
     return (geo[0], geo[1], 0.0 if len(pos) < 3 else pos[2])

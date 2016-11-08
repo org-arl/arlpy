@@ -33,6 +33,10 @@ class UtilsTestSuite(MyTestCase):
         self.assertEqual(utils.pow2db(100.0), 20.0)
         self.assertEqual(utils.db2pow(20.0), 100.0)
 
+    def test_progress(self):
+        # no regression test, since this is a display utility function
+        pass
+
 class GeoTestSuite(MyTestCase):
 
     def test_pos(self):

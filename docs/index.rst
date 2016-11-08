@@ -32,3 +32,4 @@ general interest to others:
    :maxdepth: 1
 
    dtla
+   hidaq
