@@ -72,8 +72,8 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
 
     >>> import arlpy
     >>> x1 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000)
-    >>> x2 = arlpy.signal.cw(20000, 30000, duration=0.5, fs=250000, window='hamming')
-    >>> x2 = arlpy.signal.cw(20000, 30000, duration=0.5, fs=250000, window=('kaiser', 4.0))
+    >>> x2 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000, window='hamming')
+    >>> x2 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000, window=('kaiser', 4.0))
     """
     n = int(round(duration*fs))
     x = _sig.chirp(time(n, fs), f1, duration, f2, method)
