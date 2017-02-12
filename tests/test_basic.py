@@ -39,6 +39,10 @@ class UtilsTestSuite(MyTestCase):
         x = utils.linspace3d(0, 1, 2, 0, 1, 3, 0, 0, 1)
         self.assertArrayEqual(x, [[0, 0, 0], [0, 0.5, 0], [0, 1, 0], [1, 0, 0], [1, 0.5, 0], [1, 1, 0]])
 
+    def test_progress(self):
+        # no regression test, since this is a display utility function
+        pass
+
 class GeoTestSuite(MyTestCase):
 
     def test_pos(self):
@@ -112,8 +116,18 @@ class SignalTestSuite(MyTestCase):
             self.assertArrayEqual(np.abs(x), np.ones(len(x)))
             x_fft = np.fft.fft(x)
             y = np.fft.ifft(x_fft*x_fft.conj()).real
-            self.assertEqual(round(y[0]), len(x), 'mseq(%d)'%(j))
-            self.assertTrue((np.round(y[2:])==round(y[1])).all(), 'mseq(%d)'%(j))
+            self.assertApproxEqual(y[0], len(x), precision=6)
+            self.assertArrayEqual(y[1:], -1, 'mseq(%d)'%(j), precision=6)
+
+    def test_gmseq(self):
+        # we only test until 16, as longer sequences are too slow!
+        for j in range(2, 17):
+            x = signal.gmseq(j)
+            self.assertArrayEqual(np.abs(x), np.ones(len(x)))
+            x_fft = np.fft.fft(x)
+            y = np.abs(np.fft.ifft(x_fft*x_fft.conj()))
+            self.assertApproxEqual(y[0], len(x), precision=6)
+            self.assertArrayEqual(y[1:], 0, 'gmseq(%d)'%(j), precision=6)
 
     def test_freqz(self):
         # no regression test, since this is a graphics utility function
@@ -163,6 +177,15 @@ class SignalTestSuite(MyTestCase):
         fc = np.append([27000]*12, [54000]*5)
         x = signal.nco(fc, 108000, func=np.sin)
         self.assertArrayEqual(x, [0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 1, -1, 1, -1, 1], precision=6)
+
+    def test_correlate_periodic(self):
+        x = signal.gmseq(8)
+        x_fft = np.fft.fft(x)
+        y = np.fft.ifft(x_fft*x_fft.conj())
+        z = signal.correlate_periodic(x)
+        self.assertArrayEqual(y, z, precision=6)
+        y = signal.correlate_periodic(x, x)
+        self.assertArrayEqual(y, z)
 
 class CommsTestSuite(MyTestCase):
 

@@ -26,6 +26,7 @@ The following modules are specific to tools available at the ARL and may not be 
 general interest to others:
 
     * Digital Towed Array (`arlpy.dtla`)
+    * HiDAQ (`arlpy.hidaq`)
 
 Usage
 -----

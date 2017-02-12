@@ -42,7 +42,7 @@ def cw(fc, duration, fs, window=None):
     :param fc: frequency of the pulse in Hz
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
-    :param window: window function to use (None means rectangular window)
+    :param window: window function to use (``None`` means rectangular window)
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
@@ -65,15 +65,15 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
     :param f2: ending frequency in Hz
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
-    :param method: type of sweep ('linear', 'quadratic', 'logarithmic', 'hyperbolic')
-    :param window: window function to use (None means rectangular window)
+    :param method: type of sweep (``'linear'``, ``'quadratic'``, ``'logarithmic'``, ``'hyperbolic'``)
+    :param window: window function to use (``None`` means rectangular window)
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
     >>> import arlpy
     >>> x1 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000)
-    >>> x2 = arlpy.signal.cw(20000, 30000, duration=0.5, fs=250000, window='hamming')
-    >>> x2 = arlpy.signal.cw(20000, 30000, duration=0.5, fs=250000, window=('kaiser', 4.0))
+    >>> x2 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000, window='hamming')
+    >>> x2 = arlpy.signal.sweep(20000, 30000, duration=0.5, fs=250000, window=('kaiser', 4.0))
     """
     n = int(round(duration*fs))
     x = _sig.chirp(time(n, fs), f1, duration, f2, method)
@@ -89,8 +89,15 @@ def envelope(x):
 def mseq(spec, n=None):
     """Generate m-sequence.
 
-    :param spec: m-sequence specifier (2-30)
-    :param n: length of sequence (None means full length of `2^m-1`)
+    m-sequences are sequences of :math:`\\pm 1` values with near-perfect discrete periodic
+    auto-correlation properties. All non-zero lag periodic auto-correlations
+    are -1. The zero-lag autocorrelation is :math:`2^m-1`, where m is the shift register
+    length.
+
+    This function currently supports shift register lengths between 2 and 30.
+
+    :param spec: m-sequence specifier (shift register length or taps)
+    :param n: length of sequence (``None`` means full length of :math:`2^m-1`)
 
     >>> import arlpy
     >>> x = arlpy.signal.mseq(7)
@@ -98,6 +105,8 @@ def mseq(spec, n=None):
     127
     """
     if isinstance(spec, int):
+        if spec < 2 or spec > 30:
+            raise ValueError('spec must be between 2 and 30')
         known_specs = {  # known m-sequences are specified as base 1 taps
              2: [1,2],          3: [1,3],          4: [1,4],          5: [2,5],
              6: [1,6],          7: [1,7],          8: [1,2,7,8],      9: [4,9],
@@ -121,6 +130,35 @@ def mseq(spec, n=None):
         out[j] = float(2*reg[0]-1)
         reg[0] = b
     return out
+
+def gmseq(spec, theta=None):
+    """Generate generalized m-sequence.
+
+    Generalized m-sequences are related to m-sequences but have an additional parameter
+    :math:`\\theta`. When :math:`\\theta = \\pi/2`, generalized m-sequences become normal m-sequences. When
+    :math:`\\theta < \\pi/2`, generalized m-sequences contain a DC-component that leads to an exalted
+    carrier after modulation.
+
+    When theta is :math:`\\arctan(\\sqrt{n})` where :math:`n` is the length of the m-sequence, the m-sequence
+    is considered to be period matched. Period matched m-sequences are complex sequences
+    with perfect discrete periodic auto-correlation properties, i.e., all non-zero lag
+    periodic auto-correlations are zero. The zero-lag autocorrelation is :math:`n = 2^m-1`, where
+    m is the shift register length.
+
+    This function currently supports shift register lengths between 2 and 30.
+
+    :param spec: m-sequence specifier (shift register length or taps)
+    :param theta: transmission angle (``None`` to use period-matched angle)
+
+    >>> import arlpy
+    >>> x = arlpy.signal.gmseq(7)
+    >>> len(x)
+    127
+    """
+    x = mseq(spec)
+    if theta is None:
+        theta = _np.arctan(_np.sqrt(len(x)))
+    return _np.cos(theta) + 1j*_np.sin(theta)*x
 
 def freqz(b, a=1, fs=2.0, worN=None, whole=False):
     """Plot frequency response of a filter.
@@ -168,7 +206,7 @@ def bb2pb(x, fd, fc, fs=None):
     :param x: complex baseband signal
     :param fd: sampling rate of baseband signal in Hz
     :param fc: carrier frequency in passband in Hz
-    :param fs: sampling rate of passband signal in Hz (None => same as `fd`)
+    :param fs: sampling rate of passband signal in Hz (``None`` => same as `fd`)
     :returns: real passband signal, sampled at `fs`
     """
     if fs is None or fs == fd:
@@ -199,9 +237,9 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     :param x: passband signal
     :param fs: sampling rate of passband signal in Hz
     :param fc: carrier frequency in passband in Hz
-    :param fd: sampling rate of baseband signal in Hz (None => same as `fs`)
+    :param fd: sampling rate of baseband signal in Hz (``None`` => same as `fs`)
     :param flen: number of taps in the low-pass FIR filter
-    :param cutoff: cutoff frequency in Hz (None means auto-select)
+    :param cutoff: cutoff frequency in Hz (``None`` means auto-select)
     :returns: complex baseband signal, sampled at `fd`
     """
     if cutoff is None:
@@ -219,8 +257,8 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
 def mfilter(s, x, axis=0, complex_output=False):
     """Matched filter recevied signal using a reference signal.
 
-    :param s: recevied signal
-    :param x: reference signal
+    :param s: reference signal
+    :param x: recevied signal
     :param axis: axis of the signal, if multiple signals specified
     :param complex_output: True to return complex signal, False for absolute value of complex signal
     """
@@ -304,16 +342,16 @@ def nco_gen(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):
     If fs is specified, fc is given in Hz, otherwise it is specified as
     normalized frequency (Nyquist = 1).
 
-    The default oscillator function is `exp(i*phase)` to generate a complex
+    The default oscillator function is ``exp(i*phase)`` to generate a complex
     sinusoid. Alternate oscillator functions that take in the phase angle
     and generate other outputs can be specifed. For example, a real sinusoid
-    can be generated by specifying `sin` as the function. The phase angle
-    can be generated by specifying `None` as the function.
+    can be generated by specifying ``sin`` as the function. The phase angle
+    can be generated by specifying ``None`` as the function.
 
     :param fc: oscillation frequency
     :param fs: sampling frequency in Hz
     :param phase0: initial phase in radians (default: 0)
-    :param wrap: phase angle to wrap phase around to 0 (default: 2*pi)
+    :param wrap: phase angle to wrap phase around to 0 (default: :math:`2\\pi`)
     :param func: oscillator function of phase angle (default: complex sinusoid)
 
     >>> import arlpy
@@ -338,16 +376,16 @@ def nco(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):
     If fs is specified, fc is given in Hz, otherwise it is specified as
     normalized frequency (Nyquist = 1).
 
-    The default oscillator function is `exp(i*phase)` to generate a complex
+    The default oscillator function is ``exp(i*phase)`` to generate a complex
     sinusoid. Alternate oscillator functions that take in the phase angle
     and generate other outputs can be specifed. For example, a real sinusoid
-    can be generated by specifying `sin` as the function. The phase angle
-    can be generated by specifying `None` as the function.
+    can be generated by specifying ``sin`` as the function. The phase angle
+    can be generated by specifying ``None`` as the function.
 
     :param fc: array of instantaneous oscillation frequency
     :param fs: sampling frequency in Hz
     :param phase0: initial phase in radians (default: 0)
-    :param wrap: phase angle to wrap phase around to 0 (default: 2*pi)
+    :param wrap: phase angle to wrap phase around to 0 (default: :math:`2\\pi`)
     :param func: oscillator function of phase angle (default: complex sinusoid)
 
     >>> import arlpy
@@ -361,3 +399,23 @@ def nco(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):
     p[0] = phase0
     p = _np.mod(_np.cumsum(p), wrap)
     return p if func is None else func(p)
+
+def correlate_periodic(a, v=None):
+    """Cross-correlation of two 1-dimensional periodic sequences.
+
+    a and v must be sequences with the same length. If v is not specified, it is
+    assumed to be the same as a (i.e. the function computes auto-correlation).
+
+    :param a: input sequence #1
+    :param v: input sequence #2
+    :returns: discrete periodic cross-correlation of a and v
+    """
+    a_fft = _np.fft.fft(_np.asarray(a))
+    if v is None:
+        v_cfft = a_fft.conj()
+    else:
+        v_cfft = _np.fft.fft(_np.asarray(v)).conj()
+    x = _np.fft.ifft(a_fft * v_cfft)
+    if _np.isrealobj(a) and (v is None or _np.isrealobj(v)):
+        x = x.real
+    return x

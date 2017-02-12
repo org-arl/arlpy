@@ -11,6 +11,7 @@
 """Common utility functions."""
 
 import numpy as _np
+import sys as _sys
 
 def mag2db(x):
     """Convert magnitude quantity to dB."""
@@ -77,3 +78,27 @@ def linspace3d(start0, stop0, num0, start1, stop1, num1, start2, stop2, num2):
     y = _np.linspace(start1, stop1, num1, dtype=_np.float)
     z = _np.linspace(start2, stop2, num2, dtype=_np.float)
     return _np.array(_np.meshgrid(x, y, z)).T.reshape(-1, 3)
+
+def progress(n, width=50):
+    """Display progress bar for long running operations.
+
+    :param n: total number of steps to completion
+    :param width: width of the progress bar
+
+    >>> import arlpy
+    >>> progress = arlpy.utils.progress(100)
+    >>> for j in range(100):
+            next(progress)
+    """
+    _sys.stdout.write('%s|\n' % ('-'*width))
+    _sys.stdout.flush()
+    c = 0
+    for j in xrange(n):
+        c1 = width*(j+1)/n
+        if c1 > c:
+            _sys.stdout.write('>'*(c1-c))
+            c = c1
+            if c == width:
+                _sys.stdout.write('\n')
+            _sys.stdout.flush()
+        yield j

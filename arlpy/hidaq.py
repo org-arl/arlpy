@@ -8,24 +8,23 @@
 #
 ##############################################################################
 
-"""DTLA support toolbox."""
+"""HiDAQ support toolbox."""
 
 import os as _os
 import numpy as _np
 from scipy import signal as _sig
 
-_fs = 1/(1.6e-6*26)
-_framelen = 2*26
-_channels = 24
-_magic = 0xc0de
+_fs = 500000
+_channels = 4
+_framelen = 8
 
 def check(filename):
-    """Check if a file is likely to be a valid DTLA datafile."""
+    """Check if a file is likely to be a valid HiDAQ datafile."""
     statinfo = _os.stat(filename)
-    if statinfo.st_size >= 2*2*_channels:
+    if statinfo.st_size >= 4:
         with open(filename, 'rb') as f:
-            data = _np.fromfile(f, dtype=_np.uint16, count=_framelen/2)
-        if data[0] == _magic & data[1] == _magic:
+            hdr = _np.fromfile(f, dtype=_np.dtype('>i4'), count=1)
+        if _np.round(hdr[0]/66.0) == _channels:
             return True
     return False
 
@@ -40,10 +39,14 @@ def get_channels(filename=None):
 def get_data_length(filename):
     """Get the length of the datafile in samples."""
     statinfo = _os.stat(filename)
-    return statinfo.st_size//_framelen
+    if statinfo.st_size < 4:
+        return 0
+    with open(filename, 'rb') as f:
+        hdr = _np.fromfile(f, dtype=_np.dtype('>i4'), count=1)
+    return (statinfo.st_size-hdr[0])//_framelen
 
-def get_data(filename, channel=None, start=0, length=None, detrend='linear'):
-    """Load selected data from DTLA recording.
+def get_data(filename, channel=None, start=0, length=None, detrend=None):
+    """Load selected data from HiDAQ recording.
 
     :param filename: name of the datafile
     :param channel: list of channels to read (base 0, None to read all channels)
@@ -59,14 +62,14 @@ def get_data(filename, channel=None, start=0, length=None, detrend='linear'):
     if length is None:
         length = get_data_length(filename)-start
     with open(filename, 'rb') as f:
-        f.seek(start*_framelen, _os.SEEK_SET)
-        data = _np.fromfile(f, dtype=_np.uint16, count=_framelen/2*length)
-    data = _np.reshape(data, [length,_framelen/2])
-    data = data[:,2:]
+        hdr = _np.fromfile(f, dtype=_np.dtype('>i4'), count=1)
+        f.seek(hdr[0]+start*_framelen, _os.SEEK_SET)
+        data = _np.fromfile(f, dtype=_np.dtype('>i2'), count=_channels*length)
+    data = _np.reshape(data, [length,_channels])
     data = _np.take(data, channel, axis=1).astype(_np.float)
     if len(channel) == 1:
         data = data.ravel()
-    data = 5*data/65536-2.5
+    data = data/2048
     if detrend is not None:
         data = _sig.detrend(data, axis=0, type=detrend)
     return data
