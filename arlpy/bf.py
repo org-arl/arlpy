@@ -77,7 +77,7 @@ def steering(pos, theta):
                 [0.5, 0.5]]
     >>> a2 = bf.steering(pos2, np.deg2rad(utils.linspace2d(-20, 20, 41, -10, 10, 21)))
     """
-    pos = _np.asarray(pos, dtype=_np.float)
+    pos = _np.array(pos, dtype=_np.float)
     theta = _np.asarray(theta, dtype=_np.float)
     if pos.ndim == 1:
         pos -= _np.mean(pos)
