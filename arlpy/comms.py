@@ -269,7 +269,7 @@ def iqplot(data, spec='.', labels=None):
         for i in range(len(data)):
             plt.text(data[i].real, data[i].imag, str(labels[i]))
     plt.axis([-2, 2, -2, 2])
-    plt.grid()
+    plt.grid(True)
     plt.show()
 
 def modulate(data, const):
