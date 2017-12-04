@@ -540,7 +540,7 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     x = _np.asarray(x, dtype=_np.complex)
     y = _sp.upfirdn(g, x, up=sps)
     if fc != 0:
-        y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
+        y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
         y = y.real
     return y
 
@@ -580,6 +580,6 @@ def downconvert(x, sps, fc, fs=2.0, g=None):
         g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
     y = _np.array(x, dtype=_np.complex)
     if fc != 0:
-        y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
+        y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
     y = _sp.upfirdn(g, y, down=sps)
     return y

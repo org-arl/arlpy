@@ -212,7 +212,7 @@ def bb2pb(x, fd, fc, fs=None):
         fs = fd
     else:
         y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd)
-    y *= _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(y,fs))
+    y *= _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(y,fs))
     return y.real
 
 def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
@@ -237,7 +237,7 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     """
     if cutoff is None:
         cutoff = 0.6*fd if fd is not None else 1.1*fc
-    y = x * _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(x,fs))
+    y = x * _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(x,fs))
     hb = _sig.firwin(flen, cutoff=cutoff, nyq=fs/2.0)
     y = _sig.filtfilt(hb, 1, y)
     if fd is not None and fd != fs:
