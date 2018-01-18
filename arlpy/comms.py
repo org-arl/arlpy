@@ -14,7 +14,7 @@ import numpy as _np
 import scipy.signal as _sp
 
 from numpy import pi as _pi, sin as _sin, cos as _cos, sqrt as _sqrt
-from signal import time as _time
+from arlpy.signal import time as _time
 
 # set up population count table for fast BER computation
 _MAX_M = 64
