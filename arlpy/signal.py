@@ -10,6 +10,7 @@
 
 """Signal processing toolbox."""
 
+import functools
 import operator as _op
 import numpy as _np
 import scipy.signal as _sig
@@ -117,7 +118,7 @@ def mseq(spec, n=None):
             26: [20,24,25,26], 27: [22,25,26,27], 28: [25,28],       29: [27,29],
             30: [7,28,29,30]
         }
-        spec = map(lambda x: x-1, known_specs[spec])  # convert to base 0 taps
+        spec = list(map(lambda x: x-1, known_specs[spec]))  # convert to base 0 taps
     spec.sort(reverse=True)
     m = spec[0]+1
     if n is None:
@@ -125,7 +126,7 @@ def mseq(spec, n=None):
     reg = _np.ones(m, dtype=_np.uint8)
     out = _np.zeros(n)
     for j in range(n):
-        b = reduce(_op.xor, reg[spec], 0)
+        b = functools.reduce(_op.xor, reg[spec], 0)
         reg = _np.roll(reg, 1)
         out[j] = float(2*reg[0]-1)
         reg[0] = b
@@ -319,7 +320,7 @@ def lfilter_gen(b, a):
     if a[0] != 1.0:
         raise ValueError('a[0] must be 1')
     f = _lfilter_gen(b, a)
-    f.next()
+    f.__next__()
     return f
 
 def nco_gen(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):

@@ -40,7 +40,7 @@ class UtilsTestSuite(MyTestCase):
 class GeoTestSuite(MyTestCase):
 
     def test_pos(self):
-        self.assertEqual(map(round, geo.pos([1, 103, 20])), [277438, 110598, 20])
+        self.assertEqual(list(map(round, geo.pos([1, 103, 20]))), [277438, 110598, 20])
         self.assertEqual(geo.zone([1, 103]), (48, 'N'))
         self.assertEqual(geo.zone([1, 103, 20]), (48, 'N'))
         x = (1.25, 103.5, 10.0)
@@ -63,14 +63,14 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.soundspeed(27, 35, 10), 1539)
 
     def test_absorption(self):
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -8)
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -28)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -9)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -31)
 
     def test_absorption_filter(self):
         b = uwa.absorption_filter(200000)
         w, h = sp.freqz(b, 1, 4)
-        h = 20*np.log10(np.abs(h))
-        self.assertEqual(list(np.round(h)), [0.0, -2.0, -8.0, -17.0])
+        h = utils.mag2db(np.abs(h))
+        self.assertEqual(list(np.round(h)), [0.0, -2.0, -9.0, -19.0])
 
     def test_density(self):
         self.assertApproxEqual(uwa.density(27, 35), 1023)
@@ -117,7 +117,7 @@ class SignalTestSuite(MyTestCase):
         # we only test until 16, as longer sequences are too slow!
         for j in range(2, 17):
             x = signal.gmseq(j)
-            self.assertArrayEqual(np.abs(x), np.ones(len(x)))
+            self.assertArrayEqual(np.abs(x), np.ones(len(x)), precision=6)
             x_fft = np.fft.fft(x)
             y = np.abs(np.fft.ifft(x_fft*x_fft.conj()))
             self.assertApproxEqual(y[0], len(x), precision=6)
@@ -164,9 +164,9 @@ class SignalTestSuite(MyTestCase):
 
     def test_nco(self):
         nco = signal.nco_gen(27000, 108000, func=np.sin)
-        x = [nco.next() for i in range(12)]
+        x = [nco.__next__() for i in range(12)]
         x = np.append(x, nco.send(54000))
-        x = np.append(x, [nco.next() for i in range(4)])
+        x = np.append(x, [nco.__next__() for i in range(4)])
         self.assertArrayEqual(x, [0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 1, -1, 1, -1, 1], precision=6)
         fc = np.append([27000]*12, [54000]*5)
         x = signal.nco(fc, 108000, func=np.sin)
@@ -329,7 +329,7 @@ class CommsTestSuite(MyTestCase):
         rrcp = comms.rrcosfir(0.25, 6)
         y = comms.upconvert(x,  6, fc=0.5, g=rrcp)
         z = comms.downconvert(y, 6, fc=0.5, g=rrcp)
-        delay = (len(z)-len(x))/2
+        delay = int((len(z)-len(x))/2)
         d = z[delay:-delay]-x
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -40)
         self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)

@@ -53,7 +53,7 @@ def gray_code(m):
     2
     """
     x = range(m)
-    x = map(lambda a: a ^ (a >> 1), x)
+    x = list(map(lambda a: a ^ (a >> 1), x))
     return _np.asarray(x)
 
 def invert_map(x):
@@ -91,7 +91,7 @@ def bi2sym(x, m):
     x = _np.asarray(x, dtype=_np.int)
     if _np.any(x < 0) or _np.any(x > 1):
         raise ValueError('Invalid data bits')
-    nsym = len(x)/n
+    nsym = int(len(x)/n)
     x = _np.reshape(x, (nsym, n))
     y = _np.zeros(nsym, dtype=_np.int)
     for i in range(n):

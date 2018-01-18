@@ -45,7 +45,7 @@ def _ew(x):
     return 'W' if x < 0 else 'E'
 
 def _normalize(latlong):
-    latlong = map(float, latlong)
+    latlong = list(map(float, latlong))
     if len(latlong) == 2:
         return (latlong[0], latlong[1], 0.0)
     elif len(latlong) == 3:

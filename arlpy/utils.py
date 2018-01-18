@@ -43,8 +43,8 @@ def progress(n, width=50):
     _sys.stdout.write('%s|\n' % ('-'*width))
     _sys.stdout.flush()
     c = 0
-    for j in xrange(n):
-        c1 = width*(j+1)/n
+    for j in range(n):
+        c1 = int(width*(j+1)/n)
         if c1 > c:
             _sys.stdout.write('>'*(c1-c))
             c = c1

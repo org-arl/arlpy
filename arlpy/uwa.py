@@ -53,9 +53,9 @@ def absorption(frequency, distance=1000, temperature=27, salinity=35, depth=10):
     >>> arlpy.uwa.absorption(50000)
     0.3964
     >>> arlpy.utils.mag2db(arlpy.uwa.absorption(50000))
-    -8.04
+    -9.21
     >>> arlpy.utils.mag2db(arlpy.uwa.absorption(50000, distance=3000))
-    -24.11
+    -27.64
     """
     f = frequency/1000.0
     # Marsh & Schulkin: JASA 1962
