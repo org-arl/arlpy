@@ -43,4 +43,4 @@ Useful links
 ------------
 
     * `arlpy home <https://github.com/org-arl/arlpy>`_
-    * `arlpy documentation <http://pythonhosted.org/arlpy>`_
+    * `arlpy documentation <http://arlpy.readthedocs.io>`_
