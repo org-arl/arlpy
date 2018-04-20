@@ -522,7 +522,8 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     a rectangular pulse shape is assumed.
 
     The upconversion process introduces a group delay depending on the pulse shaping
-    filter. It is usually (len(g)-1)/2 passband samples.
+    filter. It is usually (len(g)-1)/2 passband samples. When g is None, the group
+    delay is (sps-1)/2 passband samples.
 
     :param x: complex baseband data
     :param sps: number of passband samples per baseband symbol
@@ -535,10 +536,11 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     >>> bb = arlpy.comms.modulate(arlpy.comms.random_data(100), arlpy.comms.psk())
     >>> pb = arlpy.comms.upconvert(bb, 6, 27000, 108000, rrc)
     """
-    if g is None:
-        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
     x = _np.asarray(x, dtype=_np.complex)
-    y = _sp.upfirdn(g, x, up=sps)
+    if g is None:
+        y = _np.repeat(x, sps)/_np.sqrt(sps)
+    else:
+        y = _sp.upfirdn(g, x, up=sps)
     if fc != 0:
         y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
         y = y.real
@@ -576,10 +578,13 @@ def downconvert(x, sps, fc, fs=2.0, g=None):
     >>> arlpy.comms.ser(d1, d2)
     0.0
     """
-    if g is None:
-        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
-    y = _np.array(x, dtype=_np.complex)
-    if fc != 0:
+    if fc == 0:
+        y = _np.asarray(x, dtype=_np.complex)
+    else:
+        y = _sp.hilbert(x)/2
         y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
-    y = _sp.upfirdn(g, y, down=sps)
+    if g is None:
+        y = _np.sum(_np.reshape(y, (sps, -1), order='F'), axis=0)/_np.sqrt(sps)
+    else:
+        y = _sp.upfirdn(g, y, down=sps)
     return y

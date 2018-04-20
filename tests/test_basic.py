@@ -23,7 +23,7 @@ class MyTestCase(unittest.TestCase):
         if precision is None:
             np.testing.assert_array_equal(a, b, err_msg=msg)
         else:
-            np.testing.assert_allclose(a, b, rtol=0, atol=np.power(10.0, -precision), err_msg=msg)
+            np.testing.assert_almost_equal(a, b, decimal=precision, err_msg=msg)
 
 class UtilsTestSuite(MyTestCase):
 
@@ -322,7 +322,8 @@ class CommsTestSuite(MyTestCase):
                                                             -0.0321,  0.1189,  0.3109,  0.4716,  0.5342,  0.4716,  0.3109,  0.1189, -0.0321,
                                                             -0.0994, -0.0852, -0.0275,  0.0265,  0.0471,  0.0327,  0.0030, -0.0188, -0.0213,
                                                             -0.0091,  0.0050,  0.0106,  0.0064, -0.0015, -0.0057, -0.0038,  0.0014,  0.0046], precision=4)
-    def test_updown_conversion(self):
+
+    def test_updown_rrc_conversion(self):
         x = comms.upconvert(np.ones(1024), 6, fc=27000, fs=108000)
         self.assertArrayEqual(x[108:-108], np.sqrt(2./6)*np.cos(2*np.pi*27000*signal.time(x,108000))[108:-108], precision=3)
         x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
@@ -332,6 +333,15 @@ class CommsTestSuite(MyTestCase):
         delay = int((len(z)-len(x))/2)
         d = z[delay:-delay]-x
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -40)
+        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
+        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
+
+    def test_updown_rect_conversion(self):
+        x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
+        y = comms.upconvert(x,  16, fc=0.5)
+        z = comms.downconvert(y, 16, fc=0.5)
+        d = z-x
+        self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -10)
         self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
         self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
 
