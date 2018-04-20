@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'arlpy'
-copyright = u'2016, Mandar Chitre'
+copyright = u'2016-2018, Mandar Chitre'
 author = u'Mandar Chitre'
 
 # The version info for the project you're documenting, acts as replacement for
