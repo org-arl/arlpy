@@ -181,6 +181,22 @@ class SignalTestSuite(MyTestCase):
         y = signal.correlate_periodic(x, x)
         self.assertArrayEqual(y, z)
 
+    def test_goertzel(self):
+        x1 = signal.cw(64, 1, 512)
+        x2 = signal.cw(32, 1, 512)
+        g1 = signal.goertzel(64, x1, 512)
+        g2 = signal.goertzel(64, x2, 512)
+        self.assertApproxEqual(g1, 512/2)
+        self.assertApproxEqual(g2, 0)
+        g1 = signal.goertzel(32, x1, 512)
+        g2 = signal.goertzel(32, x2, 512)
+        self.assertApproxEqual(g1, 0)
+        self.assertApproxEqual(g2, 512/2)
+        x2 = np.append(x2, [0])
+        g2 = signal.goertzel(32, x2, 512, True)
+        self.assertEqual(g2.size, 513)
+        self.assertApproxEqual(np.abs(g2[-1]), 512/2)
+
 class CommsTestSuite(MyTestCase):
 
     def test_random_data(self):

@@ -410,3 +410,46 @@ def correlate_periodic(a, v=None):
     if _np.isrealobj(a) and (v is None or _np.isrealobj(v)):
         x = x.real
     return x
+
+def goertzel(f, x, fs=2.0, filter=False):
+    """Goertzel algorithm for single tone detection.
+
+    The output of the Goertzel algorithm is the same as a single bin DFT if
+    ``f/(fs/N)`` is an integer, where ``N`` is the number of points in signal ``x``.
+
+    The detection metric returned by this function is the magnitude of the output
+    of the Goertzel algorithm at the end of the input block. If ``filter`` is set
+    to ``true``, the complex time series at the output of the IIR filter is returned,
+    rather than just the detection metric.
+
+    :param f: frequency of tone of interest in Hz
+    :param x: real or complex input sequence
+    :param fs: sampling frequency of x in Hz
+    :param filter: output complex time series if true, detection metric otherwise (default: false)
+    :returns: detection metric or complex time series
+
+    >>> import arlpy
+    >>> x1 = arlpy.signal.cw(64, 1, 512)
+    >>> g1 = arlpy.signal.goertzel(64, x1, 512)
+    >>> g1
+    256.0
+    >>> g2 = arlpy.signal.goertzel(32, x1, 512)
+    >>> g2
+    0.0
+    """
+    n = x.size
+    m = f/(fs/n)
+    if filter:
+        y = _np.empty(n, dtype=_np.complex)
+    w1 = 0
+    w2 = 0
+    for j in range(n):
+        w0 = 2*_np.cos(2*_np.pi*m/n)*w1 - w2 + x[j]
+        if filter:
+            y[j] = w0 - _np.exp(-2j*_np.pi*m/n)*w1
+        w2 = w1
+        w1 = w0
+    if filter:
+        return y
+    w0 = 2*_np.cos(2*_np.pi*m/n)*w1 - w2
+    return _np.abs(w0 - _np.exp(-2j*_np.pi*m/n)*w1)
