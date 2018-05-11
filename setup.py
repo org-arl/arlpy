@@ -17,6 +17,7 @@ setup(
     install_requires=[
         'numpy>=1.11',
         'scipy>=0.18',
-        'utm>=0.4'
+        'utm>=0.4',
+        'pandas>=0.22'
     ]
 )
