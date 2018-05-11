@@ -247,12 +247,13 @@ def fsk(m=2, n=None):
         x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
 
-def iqplot(data, spec='.', labels=None):
+def iqplot(data, spec='.', labels=None, show=True):
     """Plot signal points.
 
     :param data: complex baseband signal points
     :param spec: plot specifier (see :func:`matplotlib.pyplot.plot`)
     :param labels: label for each signal point
+    :param show: automatically show plot (default: True)
 
     >>> import arlpy
     >>> arlpy.comms.iqplot(arlpy.comms.psk(8))
@@ -270,7 +271,8 @@ def iqplot(data, spec='.', labels=None):
             plt.text(data[i].real, data[i].imag, str(labels[i]))
     plt.axis([-2, 2, -2, 2])
     plt.grid(True)
-    plt.show()
+    if show:
+        plt.show()
 
 def modulate(data, const):
     """Modulate data into signal points for the specified constellation.
