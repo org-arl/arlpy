@@ -8,7 +8,7 @@
 #
 ##############################################################################
 
-"""Plotting utility functions for Jupyter notebooks using Bokeh."""
+"""Plotting utility functions for Jupyter notebooks using `Bokeh <http://bokeh.pydata.org>`_."""
 
 import numpy as _np
 import bokeh.plotting as _bplt
@@ -68,7 +68,7 @@ def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=Fal
     :param y: y data or None (if time series)
     :param fs: sampling rate for time series data
     :param maxpts: maximum number of points to plot (downsampled if more points provided)
-    :param color: line color (see [bokeh colors](https://bokeh.pydata.org/en/latest/docs/reference/colors.html))
+    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param marker: point markers (see scatter())
     :param filled: filled markers or outlined ones
     :param size: marker size
@@ -120,7 +120,7 @@ def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xl
 
     :param x: x data
     :param y: y data
-    :param color: line color (see [Bokeh colors](https://bokeh.pydata.org/en/latest/docs/reference/colors.html))
+    :param color: marker color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param marker: point markers (see scatter())
     :param filled: filled markers or outlined ones
     :param size: marker size
@@ -169,7 +169,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     :param img: 2D image data
     :param x: x-axis range for image data (min, max)
     :param y: y-axis range for image data (min, max)
-    :param colormap: named color palette or Bokeh ColorMapper (see [Bokeh palettes](https://bokeh.pydata.org/en/latest/docs/reference/palettes.html))
+    :param colormap: named color palette or Bokeh ColorMapper (see `Bokeh palettes <https://bokeh.pydata.org/en/latest/docs/reference/palettes.html>`_)
     :param clim: color axis limits (min, max)
     :param clabel: color axis label
     :param title: figure title
@@ -212,9 +212,9 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
 
     :param x: time series signal
     :param fs: sampling rate
-    :param nfft: FFT size (see [scipy.signal.spectrogram](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html))
-    :param noverlap: overlap size (see [scipy.signal.spectrogram](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html))
-    :param colormap: named color palette or Bokeh ColorMapper (see [Bokeh palettes](https://bokeh.pydata.org/en/latest/docs/reference/palettes.html))
+    :param nfft: FFT size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
+    :param noverlap: overlap size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html>`_)
+    :param colormap: named color palette or Bokeh ColorMapper (see `Bokeh palettes <https://bokeh.pydata.org/en/latest/docs/reference/palettes.html>`_)
     :param clim: color axis limits (min, max), or dynamic range with respect to maximum
     :param clabel: color axis label
     :param title: figure title
@@ -242,9 +242,9 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', title=None, xlabel='
 
     :param x: time series signal
     :param fs: sampling rate
-    :param nfft: segment size (see [scipy.signal.welch](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html))
-    :param noverlap: overlap size (see [scipy.signal.welch](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html))
-    :param window: window to use (see [scipy.signal.welch](https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html))
+    :param nfft: segment size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
+    :param noverlap: overlap size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
+    :param window: window to use (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
     :param title: figure title
     :param xlabel: x-axis label
     :param ylabel: y-axis label
