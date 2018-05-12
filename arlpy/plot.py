@@ -50,15 +50,56 @@ def hold(enable):
         _bplt.show(_figure)
         _figure = None
 
-def figure(title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None):
-    """Create a new figure.
+class figure:
+    """Create a new figure, and optionally automatically display it.
+
+    :param title: figure title
+    :param xlabel: x-axis label
+    :param ylabel: y-axis label
+    :param xlim: x-axis limits (min, max)
+    :param ylim: y-axis limits (min, max)
+    :param width: figure width in pixels
+    :param height: figure height in pixels
+
+    This function can be used in standalone mode to create a figure:
 
     >>> from arlpy.plot import figure, plot
-    >>> figure(title='Demo', width=500)
+    >>> figure(title='Demo 1', width=500)
     >>> plot([0,10], [0,10])
+
+    Or it can be used as a context manager to create, hold and display a figure:
+
+    >>> from arlpy.plot import figure, plot
+    >>> with figure(title='Demo 2', width=500):
+    >>>     plot([0,10], [0,10], color='blue', legend='A')
+    >>>     plot([10,0], [0,10], marker='o', color='green', legend='B')
+
+    It can even be used as a context manager to work with Bokeh functions directly:
+
+    >>> from arlpy.plot import figure, plot
+    >>> with figure(title='Demo 3', width=500) as f:
+    >>>     f.line([0,10], [0,10], line_color='blue')
+    >>>     f.square([3,7], [4,5], line_color='green', fill_color='yellow', size=10)
     """
-    global _figure
-    _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+
+    def __init__(self, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None):
+        global _figure
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+
+    def __enter__(self):
+        global _hold
+        _hold = True
+        return _figure
+
+    def __exit__(self, *args):
+        global _hold, _figure
+        _hold = False
+        _bplt.show(_figure)
+        _figure = None
+        return True
+
+def curfig():
+    """Get the current figure."""
     return _figure
 
 def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
