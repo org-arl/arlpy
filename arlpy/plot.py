@@ -31,12 +31,12 @@ def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim):
     return _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel)
 
 def figsize(x, y):
-    """Sets the default figure size in pixels."""
+    """Set the default figure size in pixels."""
     global _figsize
     _figsize = [x, y]
 
 def hold(enable):
-    """Combines multiple plots into one.
+    """Combine multiple plots into one.
 
     >>> from arlpy.plot import hold, plot
     >>> hold(True)
@@ -51,7 +51,7 @@ def hold(enable):
         _figure = None
 
 def figure(title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None):
-    """Creates a new figure.
+    """Create a new figure.
 
     >>> from arlpy.plot import figure, plot
     >>> figure(title='Demo', width=500)
@@ -62,7 +62,7 @@ def figure(title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=Non
     return _figure
 
 def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
-    """Plots a line graph or time series.
+    """Plot a line graph or time series.
 
     :param x: x data or time series data (if y is None)
     :param y: y data or None (if time series)
@@ -89,7 +89,7 @@ def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=Fal
     >>> plot(np.random.normal(size=1000), fs=100, color='green', legend='B')
     """
     global _figure
-    x = _np.asarray(x, dtype=_np.float)
+    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     if y is None:
         y = x
         x = _np.arange(x.size)
@@ -100,7 +100,7 @@ def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=Fal
         if xlim is None:
             xlim = (x[0], x[-1])
     else:
-        y = _np.asarray(y, dtype=_np.float)
+        y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
     if x.size > maxpts:
@@ -116,7 +116,7 @@ def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=Fal
         _figure = None
 
 def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
-    """Plots a scatter plot.
+    """Plot a scatter plot.
 
     :param x: x data
     :param y: y data
@@ -141,8 +141,8 @@ def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xl
     global _figure
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
-    x = _np.asarray(x, dtype=_np.float)
-    y = _np.asarray(y, dtype=_np.float)
+    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
+    y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if marker == 'o':
         _figure.circle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == 's':
@@ -164,7 +164,7 @@ def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xl
         _figure = None
 
 def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False):
-    """Plots a heatmap of 2D scalar data.
+    """Plot a heatmap of 2D scalar data.
 
     :param img: 2D image data
     :param x: x-axis range for image data (min, max)
@@ -263,3 +263,92 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', title=None, xlabel='
     if ylim is None:
         ylim = [_np.max(Pxx)-50, _np.max(Pxx)+10]
     plot(f, Pxx, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
+
+def vlines(x, color='gray', style='dashed', hold=False):
+    """Draw vertical lines on a plot.
+
+    :param x: x location of lines
+    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> from arlpy.plot import plot, vlines
+    >>> plot([0, 20], [0, 10], hold=True)
+    >>> vlines([7, 12])
+    """
+    global _figure
+    if _figure is None:
+        return
+    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
+    for j in range(x.size):
+        _figure.add_layout(_bmodels.Span(location=x[j], dimension='height', line_color=color, line_dash=style))
+    if not hold and not _hold:
+        _bplt.show(_figure)
+        _figure = None
+
+def hlines(y, color='gray', style='dashed', hold=False):
+    """Draw horizontal lines on a plot.
+
+    :param y: y location of lines
+    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> from arlpy.plot import plot, hlines
+    >>> plot([0, 20], [0, 10], hold=True)
+    >>> hlines(3, color='red', style='dotted')
+    """
+    global _figure
+    if _figure is None:
+        return
+    y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
+    for j in range(y.size):
+        _figure.add_layout(_bmodels.Span(location=y[j], dimension='width', line_color=color, line_dash=style))
+    if not hold and not _hold:
+        _bplt.show(_figure)
+        _figure = None
+
+def text(x, y, s, color='gray', size='8pt', hold=False):
+    """Add text annotation to a plot.
+
+    :param x: x location of left of text
+    :param y: y location of bottom of text
+    :param s: text to add
+    :param color: text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param size: text size (e.g. '12pt', '3em')
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> from arlpy.plot import plot, text
+    >>> plot([0, 20], [0, 10], hold=True)
+    >>> text(7, 3, 'demo', color='orange')
+    """
+    global _figure
+    if _figure is None:
+        return
+    _figure.add_layout(_bmodels.Label(x=x, y=y, text=s, text_font_size=size, text_color=color))
+    if not hold and not _hold:
+        _bplt.show(_figure)
+        _figure = None
+
+def box(left=None, right=None, top=None, bottom=None, color='yellow', alpha=0.1, hold=False):
+    """Add a highlight box to a plot.
+
+    :param left: x location of left of box
+    :param right: x location of right of box
+    :param top: y location of top of box
+    :param bottom: y location of bottom of box
+    :param color: text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param alpha: transparency (0-1)
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> from arlpy.plot import plot, box
+    >>> plot([0, 20], [0, 10], hold=True)
+    >>> box(left=5, right=10, top=8)
+    """
+    global _figure
+    if _figure is None:
+        return
+    _figure.add_layout(_bmodels.BoxAnnotation(left=left, right=right, top=top, bottom=bottom, fill_color=color, fill_alpha=alpha))
+    if not hold and not _hold:
+        _bplt.show(_figure)
+        _figure = None
