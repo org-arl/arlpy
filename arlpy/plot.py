@@ -61,13 +61,14 @@ def figure(title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=Non
     _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
     return _figure
 
-def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
+def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
     """Plot a line graph or time series.
 
     :param x: x data or time series data (if y is None)
     :param y: y data or None (if time series)
     :param fs: sampling rate for time series data
     :param maxpts: maximum number of points to plot (downsampled if more points provided)
+    :param pooling: pooling for downsampling (None, 'max', 'min', 'mean', 'median')
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param marker: point markers (see scatter())
     :param filled: filled markers or outlined ones
@@ -106,7 +107,19 @@ def plot(x, y=None, fs=None, maxpts=10000, color='blue', marker=None, filled=Fal
     if x.size > maxpts:
         n = int(_np.ceil(x.size/maxpts))
         x = x[::n]
-        y = y[::n]
+        if pooling is None:
+            y = y[::n]
+        elif pooling == 'max':
+            y = _np.amax(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
+        elif pooling == 'min':
+            y = _np.amin(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
+        elif pooling == 'mean':
+            y = _np.mean(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
+        elif pooling == 'median':
+            y = _np.mean(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
+        else:
+            y = y[::n]
+            _warn('Unknown pooling: '+pooling)
         _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text='Downsampled by '+str(n), text_font_size="8pt", text_alpha=0.5))
     _figure.line(x, y, line_color=color, legend=legend)
     if marker is not None:
