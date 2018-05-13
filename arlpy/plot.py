@@ -20,20 +20,34 @@ from warnings import warn as _warn
 _bplt.output_notebook(hide_banner=True)
 
 _figure = None
+_figures = None
 _hold = False
-_figsize = [600, 400]
+_figsize = (600, 400)
+_color = 0
+#_colors = ['blue', 'red', 'forestgreen', 'orange', 'gold', 'darkblue', 'magenta', 'springgreen',
+#           'lightskyblue', 'olive', 'salmon', 'firebrick', 'chocolate', 'deeppink', 'khaki', 'turquoise']
+_colors = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
+           'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
 
 def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim):
+    global _color
     if width is None:
         width = _figsize[0]
     if height is None:
         height = _figsize[1]
+    _color = 0
     return _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel)
+
+def _show(f):
+    if _figures is None:
+        _bplt.show(f)
+    else:
+        _figures[-1].append(f)
 
 def figsize(x, y):
     """Set the default figure size in pixels."""
     global _figsize
-    _figsize = [x, y]
+    _figsize = (x, y)
 
 def hold(enable):
     """Combine multiple plots into one.
@@ -47,7 +61,7 @@ def hold(enable):
     global _hold, _figure
     _hold = enable
     if not _hold and _figure is not None:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
 class figure:
@@ -94,15 +108,57 @@ class figure:
     def __exit__(self, *args):
         global _hold, _figure
         _hold = False
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
-        return True
 
-def curfig():
+class many_figures:
+    """Create a grid of many figures.
+
+    :param figsize: default size of figure in grid as (width, height)
+
+    >>> from arlpy.plot import many_figures, plot, next_row, next_column
+    >>> with many_figures(figsize=(300,200)):
+    >>>     plot([0,10], [0,10])
+    >>>     plot([0,10], [0,10])
+    >>>     next_row()
+    >>>     next_column()
+    >>>     plot([0,10], [0,10])
+    """
+
+    def __init__(self, figsize=None):
+        self.figsize = figsize
+
+    def __enter__(self):
+        global _figures, _figsize
+        _figures = [[]]
+        self.ofigsize = _figsize
+        if self.figsize is not None:
+            _figsize = self.figsize
+
+    def __exit__(self, *args):
+        global _figures, _figsize
+        if len(_figures) > 1 or len(_figures[0]) > 0:
+            _bplt.show(_bplt.gridplot(_figures))
+        _figures = None
+        _figsize = self.ofigsize
+
+def next_row():
+    """Move to the next row in a grid of many figures."""
+    global _figures
+    if _figures is not None:
+        _figures.append([])
+
+def next_column():
+    """Move to the next column in a grid of many figures."""
+    global _figures
+    if _figures is not None:
+        _figures[-1].append(None)
+
+def gcf():
     """Get the current figure."""
     return _figure
 
-def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
+def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
     """Plot a line graph or time series.
 
     :param x: x data or time series data (if y is None)
@@ -111,7 +167,9 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=No
     :param maxpts: maximum number of points to plot (downsampled if more points provided)
     :param pooling: pooling for downsampling (None, 'max', 'min', 'mean', 'median')
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
-    :param marker: point markers (see scatter())
+    :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot', None)
+    :param thickness: line width in pixels
+    :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
     :param filled: filled markers or outlined ones
     :param size: marker size
     :param mskip: number of points to skip marking (to avoid too many markers)
@@ -130,7 +188,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=No
     >>> plot([0,10], [1,-1], color='blue', marker='o', filled=True, legend='A', hold=True)
     >>> plot(np.random.normal(size=1000), fs=100, color='green', legend='B')
     """
-    global _figure
+    global _figure, _color
     x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     if y is None:
         y = x
@@ -145,37 +203,46 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color='blue', marker=No
         y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+    if color is None:
+        color = _colors[_color % len(_colors)]
+        _color += 1
     if x.size > maxpts:
         n = int(_np.ceil(x.size/maxpts))
         x = x[::n]
+        desc = 'Downsampled by '+str(n)
         if pooling is None:
             y = y[::n]
         elif pooling == 'max':
+            desc += ', '+pooling+' pooled'
             y = _np.amax(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
         elif pooling == 'min':
+            desc += ', '+pooling+' pooled'
             y = _np.amin(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
         elif pooling == 'mean':
+            desc += ', '+pooling+' pooled'
             y = _np.mean(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
         elif pooling == 'median':
+            desc += ', '+pooling+' pooled'
             y = _np.mean(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
         else:
-            y = y[::n]
             _warn('Unknown pooling: '+pooling)
-        _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text='Downsampled by '+str(n), text_font_size="8pt", text_alpha=0.5))
-    _figure.line(x, y, line_color=color, legend=legend)
+            y = y[::n]
+        _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text=desc, text_font_size="8pt", text_alpha=0.5))
+    if style is not None:
+        _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend=legend)
     if marker is not None:
         scatter(x[::(mskip+1)], y[::(mskip+1)], marker=marker, filled=filled, size=size, color=color, legend=legend, hold=True)
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
-def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
+def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
     """Plot a scatter plot.
 
     :param x: x data
     :param y: y data
     :param color: marker color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
-    :param marker: point markers (see scatter())
+    :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
     :param filled: filled markers or outlined ones
     :param size: marker size
     :param title: figure title
@@ -192,12 +259,17 @@ def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xl
     >>> import numpy as np
     >>> scatter(np.random.normal(size=100), np.random.normal(size=100), color='blue', marker='o')
     """
-    global _figure
+    global _figure, _color
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
     x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
-    if marker == 'o':
+    if color is None:
+        color = _colors[_color % len(_colors)]
+        _color += 1
+    if marker == '.':
+        _figure.circle(x, y, size=size/2, line_color=color, fill_color=color, legend=legend)
+    elif marker == 'o':
         _figure.circle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == 's':
         _figure.square(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
@@ -214,7 +286,7 @@ def scatter(x, y, marker='o', filled=False, size=6, color='blue', title=None, xl
     elif marker is not None:
         _warn('Bad marker type: '+marker)
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
 def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False):
@@ -241,9 +313,9 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     """
     global _figure
     if x is None:
-        x = [0, img.shape[1]-1]
+        x = (0, img.shape[1]-1)
     if y is None:
-        y = [0, img.shape[0]-1]
+        y = (0, img.shape[0]-1)
     if xlim is None:
         xlim = x
     if ylim is None:
@@ -258,7 +330,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     cbar = _bmodels.ColorBar(color_mapper=colormap, location=(0,0), title=clabel)
     _figure.add_layout(cbar, 'right')
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
 def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None, clabel='dB', title=None, xlabel='Time (s)', ylabel='Frequency (Hz)', xlim=None, ylim=None, width=None, height=None, hold=False):
@@ -287,11 +359,11 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     f, t, Sxx = _sig.spectrogram(x, fs=fs, nfft=nfft, noverlap=noverlap)
     Sxx = 10*_np.log10(Sxx)
     if isinstance(clim, float) or isinstance(clim, int):
-        clim = [_np.max(Sxx)-clim, _np.max(Sxx)]
+        clim = (_np.max(Sxx)-clim, _np.max(Sxx))
     image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
 
 
-def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, hold=False):
+def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, hold=False):
     """Plot power spectral density of a given time series signal.
 
     :param x: time series signal
@@ -299,6 +371,12 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', title=None, xlabel='
     :param nfft: segment size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
     :param noverlap: overlap size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
     :param window: window to use (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
+    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param thickness: line width in pixels
+    :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
+    :param filled: filled markers or outlined ones
+    :param size: marker size
     :param title: figure title
     :param xlabel: x-axis label
     :param ylabel: y-axis label
@@ -314,16 +392,19 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', title=None, xlabel='
     """
     f, Pxx = _sig.welch(x, fs=fs, nperseg=nfft, noverlap=noverlap, window=window)
     Pxx = 10*_np.log10(Pxx)
+    if xlim is None:
+        xlim = (0, fs/2)
     if ylim is None:
-        ylim = [_np.max(Pxx)-50, _np.max(Pxx)+10]
-    plot(f, Pxx, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
+        ylim = (_np.max(Pxx)-50, _np.max(Pxx)+10)
+    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
 
-def vlines(x, color='gray', style='dashed', hold=False):
+def vlines(x, color='gray', style='dashed', thickness=1, hold=False):
     """Draw vertical lines on a plot.
 
     :param x: x location of lines
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param thickness: line width in pixels
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import plot, vlines
@@ -335,17 +416,18 @@ def vlines(x, color='gray', style='dashed', hold=False):
         return
     x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     for j in range(x.size):
-        _figure.add_layout(_bmodels.Span(location=x[j], dimension='height', line_color=color, line_dash=style))
+        _figure.add_layout(_bmodels.Span(location=x[j], dimension='height', line_color=color, line_dash=style, line_width=thickness))
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
-def hlines(y, color='gray', style='dashed', hold=False):
+def hlines(y, color='gray', style='dashed', thickness=1, hold=False):
     """Draw horizontal lines on a plot.
 
     :param y: y location of lines
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param thickness: line width in pixels
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import plot, hlines
@@ -357,9 +439,9 @@ def hlines(y, color='gray', style='dashed', hold=False):
         return
     y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     for j in range(y.size):
-        _figure.add_layout(_bmodels.Span(location=y[j], dimension='width', line_color=color, line_dash=style))
+        _figure.add_layout(_bmodels.Span(location=y[j], dimension='width', line_color=color, line_dash=style, line_width=thickness))
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
 def text(x, y, s, color='gray', size='8pt', hold=False):
@@ -381,7 +463,7 @@ def text(x, y, s, color='gray', size='8pt', hold=False):
         return
     _figure.add_layout(_bmodels.Label(x=x, y=y, text=s, text_font_size=size, text_color=color))
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
 
 def box(left=None, right=None, top=None, bottom=None, color='yellow', alpha=0.1, hold=False):
@@ -404,5 +486,28 @@ def box(left=None, right=None, top=None, bottom=None, color='yellow', alpha=0.1,
         return
     _figure.add_layout(_bmodels.BoxAnnotation(left=left, right=right, top=top, bottom=bottom, fill_color=color, fill_alpha=alpha))
     if not hold and not _hold:
-        _bplt.show(_figure)
+        _show(_figure)
         _figure = None
+
+def color(n):
+    """Get a numbered color to cycle over a set of colors.
+
+    >>> from arlpy.plot import color, plot
+    >>> color(0)
+    'blue'
+    >>> color(1)
+    'red'
+    >>> plot([0, 20], [0, 10], color=color(3))
+    """
+    return _colors[n % len(_colors)]
+
+def set_colors(c):
+    """Provide a list of named colors to cycle over.
+
+    >>> from arlpy.plot import set_colors, color
+    >>> set_colors(['red', 'blue', 'green', 'black'])
+    >>> color(2)
+    'green'
+    """
+    global _colors
+    _colors = c
