@@ -8,39 +8,85 @@
 #
 ##############################################################################
 
-"""Plotting utility functions for Jupyter notebooks using `Bokeh <http://bokeh.pydata.org>`_."""
+"""Easy-to-use plotting utilities based on `Bokeh <http://bokeh.pydata.org>`_."""
 
 import numpy as _np
+import os as _os
+from warnings import warn as _warn
 import bokeh.plotting as _bplt
 import bokeh.models as _bmodels
 import bokeh.palettes as _bpal
 import scipy.signal as _sig
-from warnings import warn as _warn
-
-_bplt.output_notebook(hide_banner=True)
+import IPython.display as _ipyd
 
 _figure = None
 _figures = None
 _hold = False
 _figsize = (600, 400)
 _color = 0
-#_colors = ['blue', 'red', 'forestgreen', 'orange', 'gold', 'darkblue', 'magenta', 'springgreen',
-#           'lightskyblue', 'olive', 'salmon', 'firebrick', 'chocolate', 'deeppink', 'khaki', 'turquoise']
+_notebook = False
+_interactive = True
+_ccount = 0
 _colors = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
            'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
 
-def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim):
+try:
+    get_ipython                     # check if we are using iPython
+    _os.environ['JPY_PARENT_PID']    # and Jupyter
+    _bplt.output_notebook(hide_banner=True)
+    _notebook = True
+except:
+    pass                            # not in Jupyter, skip notebook initialization
+
+def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive):
     global _color
     if width is None:
         width = _figsize[0]
     if height is None:
         height = _figsize[1]
     _color = 0
-    return _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel)
+    tools = []
+    if interactive is None:
+        interactive = _interactive
+    if interactive:
+        tools = 'pan,box_zoom,wheel_zoom,reset,save'
+    f = _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel, tools=tools)
+    f.toolbar.logo = None
+    return f
+
+def _process_canvas(figures):
+    global _ccount
+    disable = []
+    i = 0
+    for f in figures:
+        i += 1
+        if f.tools == []:
+            disable.append(i)
+        else:
+            pass
+    js = 'var disable = '+str(disable)
+    js += """
+    var clist = document.getElementsByClassName('bk-canvas');
+    var j = 0;
+    for (var i = 0; i < clist.length; i++) {
+        if (clist[i].id == '') {
+            j++;
+            clist[i].id = 'bkc-'+String(i)+'-'+String(+new Date());
+            if (disable.indexOf(j) >= 0) {
+                var png = clist[i].toDataURL()
+                var img = document.createElement('img')
+                img.src = png
+                clist[i].parentNode.replaceChild(img, clist[i])
+            }
+        }
+    }
+    """
+    _ipyd.display(_ipyd.Javascript(js))
 
 def _show(f):
     if _figures is None:
         _bplt.show(f)
+        _process_canvas([f])
     else:
         _figures[-1].append(f)
 
@@ -48,6 +94,10 @@ def figsize(x, y):
     """Set the default figure size in pixels."""
     global _figsize
     _figsize = (x, y)
+
+def interactive(b):
+    """Set default interactivity for plots."""
+    _interactive = b
 
 def hold(enable):
     """Combine multiple plots into one.
@@ -74,6 +124,7 @@ class figure:
     :param ylim: y-axis limits (min, max)
     :param width: figure width in pixels
     :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
 
     This function can be used in standalone mode to create a figure:
 
@@ -96,9 +147,9 @@ class figure:
     >>>     f.square([3,7], [4,5], line_color='green', fill_color='yellow', size=10)
     """
 
-    def __init__(self, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None):
+    def __init__(self, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, interactive=None):
         global _figure
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
 
     def __enter__(self):
         global _hold
@@ -138,7 +189,8 @@ class many_figures:
     def __exit__(self, *args):
         global _figures, _figsize
         if len(_figures) > 1 or len(_figures[0]) > 0:
-            _bplt.show(_bplt.gridplot(_figures))
+            _bplt.show(_bplt.gridplot(_figures, merge_tools=False))
+            _process_canvas([item for sublist in _figures for item in sublist])
         _figures = None
         _figsize = self.ofigsize
 
@@ -158,7 +210,7 @@ def gcf():
     """Get the current figure."""
     return _figure
 
-def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
+def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot a line graph or time series.
 
     :param x: x data or time series data (if y is None)
@@ -181,6 +233,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param legend: legend text
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import plot
@@ -202,7 +255,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
     else:
         y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
     if color is None:
         color = _colors[_color % len(_colors)]
         _color += 1
@@ -236,7 +289,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
         _show(_figure)
         _figure = None
 
-def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False):
+def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot a scatter plot.
 
     :param x: x data
@@ -253,6 +306,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param legend: legend text
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import scatter
@@ -261,7 +315,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     """
     global _figure, _color
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
     x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if color is None:
@@ -289,7 +343,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
         _show(_figure)
         _figure = None
 
-def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False):
+def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
     """Plot a heatmap of 2D scalar data.
 
     :param img: 2D image data
@@ -305,6 +359,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     :param ylim: y-axis limits (min, max)
     :param width: figure width in pixels
     :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import image
@@ -321,7 +376,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     if ylim is None:
         ylim = y
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
     if clim is None:
         clim = [_np.amin(img), _np.amax(img)]
     if isinstance(colormap, str):
@@ -333,7 +388,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
         _show(_figure)
         _figure = None
 
-def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None, clabel='dB', title=None, xlabel='Time (s)', ylabel='Frequency (Hz)', xlim=None, ylim=None, width=None, height=None, hold=False):
+def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None, clabel='dB', title=None, xlabel='Time (s)', ylabel='Frequency (Hz)', xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
     """Plot spectrogram of a given time series signal.
 
     :param x: time series signal
@@ -350,6 +405,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     :param ylim: y-axis limits (min, max)
     :param width: figure width in pixels
     :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import specgram
@@ -360,10 +416,10 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     Sxx = 10*_np.log10(Sxx)
     if isinstance(clim, float) or isinstance(clim, int):
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
-    image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
+    image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
 
-def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, hold=False):
+def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
     """Plot power spectral density of a given time series signal.
 
     :param x: time series signal
@@ -384,6 +440,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
     :param ylim: y-axis limits (min, max)
     :param width: figure width in pixels
     :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
     >>> from arlpy.plot import psd
@@ -396,7 +453,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
         xlim = (0, fs/2)
     if ylim is None:
         ylim = (_np.max(Pxx)-50, _np.max(Pxx)+10)
-    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold)
+    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
 def vlines(x, color='gray', style='dashed', thickness=1, hold=False):
     """Draw vertical lines on a plot.
