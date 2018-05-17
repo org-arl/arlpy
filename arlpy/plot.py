@@ -532,7 +532,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
 
     :param x: time series signal
     :param fs: sampling rate
-    :param nfft: FFT size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
+    :param nfft: FFT size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html>`_)
     :param noverlap: overlap size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html>`_)
     :param colormap: named color palette or Bokeh ColorMapper (see `Bokeh palettes <https://bokeh.pydata.org/en/latest/docs/reference/palettes.html>`_)
     :param clim: color axis limits (min, max), or dynamic range with respect to maximum

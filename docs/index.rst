@@ -20,6 +20,7 @@ and developers working on signal processing, communication and underwater acoust
    comms
    geo
    uwa
+   plot
    utils
 
 Special-purpose modules
