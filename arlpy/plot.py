@@ -319,7 +319,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
 
     :param x: x data
     :param y: y data
-    :param color: marker color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: marker color (see `Bokeh colors`_)
     :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
     :param filled: filled markers or outlined ones
     :param size: marker size
@@ -417,7 +417,7 @@ def vlines(x, color='gray', style='dashed', thickness=1, hold=False):
     """Draw vertical lines on a plot.
 
     :param x: x location of lines
-    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: line color (see `Bokeh colors`_)
     :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
     :param thickness: line width in pixels
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
@@ -440,7 +440,7 @@ def hlines(y, color='gray', style='dashed', thickness=1, hold=False):
     """Draw horizontal lines on a plot.
 
     :param y: y location of lines
-    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: line color (see `Bokeh colors`_)
     :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
     :param thickness: line width in pixels
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
@@ -465,7 +465,7 @@ def text(x, y, s, color='gray', size='8pt', hold=False):
     :param x: x location of left of text
     :param y: y location of bottom of text
     :param s: text to add
-    :param color: text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: text color (see `Bokeh colors`_)
     :param size: text size (e.g. '12pt', '3em')
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
@@ -488,7 +488,7 @@ def box(left=None, right=None, top=None, bottom=None, color='yellow', alpha=0.1,
     :param right: x location of right of box
     :param top: y location of top of box
     :param bottom: y location of bottom of box
-    :param color: text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: text color (see `Bokeh colors`_)
     :param alpha: transparency (0-1)
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
 
@@ -533,8 +533,8 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     :param x: time series signal
     :param fs: sampling rate
     :param nfft: FFT size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html>`_)
-    :param noverlap: overlap size (see `scipy.signal.spectrogram <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.spectrogram.html>`_)
-    :param colormap: named color palette or Bokeh ColorMapper (see `Bokeh palettes <https://bokeh.pydata.org/en/latest/docs/reference/palettes.html>`_)
+    :param noverlap: overlap size (see `scipy.signal.spectrogram`_)
+    :param colormap: named color palette or Bokeh ColorMapper (see `Bokeh palettes`_)
     :param clim: color axis limits (min, max), or dynamic range with respect to maximum
     :param clabel: color axis label
     :param title: figure title
@@ -563,9 +563,9 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
     :param x: time series signal
     :param fs: sampling rate
     :param nfft: segment size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
-    :param noverlap: overlap size (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
-    :param window: window to use (see `scipy.signal.welch <https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.welch.html>`_)
-    :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param noverlap: overlap size (see `scipy.signal.welch`_)
+    :param window: window to use (see `scipy.signal.welch`_)
+    :param color: line color (see `Bokeh colors`_)
     :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
     :param thickness: line width in pixels
     :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
@@ -598,7 +598,7 @@ def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, t
 
     :param data: complex baseband signal points
     :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
-    :param color: marker/text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param color: marker/text color (see `Bokeh colors`_)
     :param labels: label for each signal point, or True to auto-generate labels
     :param filled: filled markers or outlined ones
     :param size: marker/text size (e.g. 5, '8pt')
