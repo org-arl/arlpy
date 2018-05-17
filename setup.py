@@ -18,6 +18,7 @@ setup(
         'numpy>=1.11',
         'scipy>=0.18',
         'utm>=0.4',
-        'pandas>=0.22'
+        'pandas>=0.22.0',
+        'bokeh>=0.12.16'
     ]
 )
