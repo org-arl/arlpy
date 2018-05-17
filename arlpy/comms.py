@@ -12,7 +12,6 @@
 
 import numpy as _np
 import scipy.signal as _sp
-
 from numpy import pi as _pi, sin as _sin, cos as _cos, sqrt as _sqrt
 from arlpy.signal import time as _time
 
@@ -246,33 +245,6 @@ def fsk(m=2, n=None):
     for i in range(m):
         x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
-
-def iqplot(data, spec='.', labels=None, show=True):
-    """Plot signal points.
-
-    :param data: complex baseband signal points
-    :param spec: plot specifier (see :func:`matplotlib.pyplot.plot`)
-    :param labels: label for each signal point
-    :param show: automatically show plot (default: True)
-
-    >>> import arlpy
-    >>> arlpy.comms.iqplot(arlpy.comms.psk(8))
-    >>> arlpy.comms.iqplot(arlpy.comms.qam(16), 'rx')
-    >>> arlpy.comms.iqplot(arlpy.comms.psk(4), labels=['00', '01', '11', '10'])
-    """
-    import matplotlib.pyplot as plt
-    data = _np.asarray(data)
-    if labels is None:
-        plt.plot(data.real, data.imag, spec)
-    else:
-        if labels == True:
-            labels = range(len(data))
-        for i in range(len(data)):
-            plt.text(data[i].real, data[i].imag, str(labels[i]))
-    plt.axis([-2, 2, -2, 2])
-    plt.grid(True)
-    if show:
-        plt.show()
 
 def modulate(data, const):
     """Modulate data into signal points for the specified constellation.

@@ -593,3 +593,89 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
         ylim = (_np.max(Pxx)-50, _np.max(Pxx)+10)
     plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
+def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, title=None, xlabel=None, ylabel=None, xlim=[-2, 2], ylim=[-2, 2], width=None, height=None, hold=False, interactive=None):
+    """Plot signal points.
+
+    :param data: complex baseband signal points
+    :param marker: point markers ('.', 'o', 's', '*', 'x', '+', 'd', '^')
+    :param color: marker/text color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param labels: label for each signal point, or True to auto-generate labels
+    :param filled: filled markers or outlined ones
+    :param size: marker/text size (e.g. 5, '8pt')
+    :param title: figure title
+    :param xlabel: x-axis label
+    :param ylabel: y-axis label
+    :param xlim: x-axis limits (min, max)
+    :param ylim: y-axis limits (min, max)
+    :param width: figure width in pixels
+    :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> import arlpy
+    >>> import arlpy.plot
+    >>> arlpy.plot.iqplot(arlpy.comms.psk(8))
+    >>> arlpy.plot.iqplot(arlpy.comms.qam(16), color='red', marker='x')
+    >>> arlpy.plot.iqplot(arlpy.comms.psk(4), labels=['00', '01', '11', '10'])
+    """
+    data = _np.asarray(data, dtype=_np.complex)
+    figure(title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
+    if labels is None:
+        if size is None:
+            size = 5
+        scatter(data.real, data.imag, marker=marker, filled=filled, color=color, size=size, hold=hold)
+    else:
+        if labels == True:
+            labels = range(len(data))
+        if color is None:
+            color = 'black'
+        plot([0], [0], hold=True)
+        for i in range(len(data)):
+            text(data[i].real, data[i].imag, str(labels[i]), color=color, size=size, hold=True if i < len(data)-1 else hold)
+
+def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', thickness=1, title=None, xlabel='Frequency (Hz)', xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
+    """Plot frequency response of a filter.
+
+    This is a convenience function to plot frequency response, and internally uses
+    :func:`scipy.signal.freqz` to estimate the response. For further details, see the
+    documentation for :func:`scipy.signal.freqz`.
+
+    :param b: numerator of a linear filter
+    :param a: denominator of a linear filter
+    :param fs: sampling rate in Hz (optional, normalized frequency if not specified)
+    :param worN: see :func:`scipy.signal.freqz`
+    :param whole: see :func:`scipy.signal.freqz`
+    :param degrees: True to display phase in degrees, False for radians
+    :param style: line style ('solid', 'dashed', 'dotted', 'dotdash', 'dashdot')
+    :param thickness: line width in pixels
+    :param title: figure title
+    :param xlabel: x-axis label
+    :param ylabel1: y-axis label for magnitude
+    :param ylabel2: y-axis label for phase
+    :param xlim: x-axis limits (min, max)
+    :param ylim: y-axis limits (min, max)
+    :param width: figure width in pixels
+    :param height: figure height in pixels
+    :param interactive: enable interactive tools (pan, zoom, etc) for plot
+    :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+
+    >>> import arlpy
+    >>> arlpy.plot.freqz([1,1,1,1,1], fs=120000);
+    """
+    w, h = _sig.freqz(b, a, worN, whole)
+    Hxx = 20*_np.log10(abs(h)+_np.finfo(float).eps)
+    f = w*fs/(2*_np.pi)
+    if xlim is None:
+        xlim = (0, fs/2)
+    if ylim is None:
+        ylim = (_np.max(Hxx)-50, _np.max(Hxx)+10)
+    figure(title=title, xlabel=xlabel, ylabel='Amplitude (dB)', xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
+    _hold_enable(True)
+    plot(f, Hxx, color=color(0), style=style, thickness=thickness, legend='Magnitude')
+    fig = gcf()
+    units = 180/_np.pi if degrees else 1
+    fig.extra_y_ranges = {'phase': _bmodels.Range1d(start=-_np.pi*units, end=_np.pi*units)}
+    fig.add_layout(_bmodels.LinearAxis(y_range_name='phase', axis_label='Phase (degrees)' if degrees else 'Phase (radians)'), 'right')
+    phase = _np.angle(h)*units
+    fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend='Phase', y_range_name='phase')
+    _hold_enable(hold)

@@ -161,41 +161,6 @@ def gmseq(spec, theta=None):
         theta = _np.arctan(_np.sqrt(len(x)))
     return _np.cos(theta) + 1j*_np.sin(theta)*x
 
-def freqz(b, a=1, fs=2.0, worN=None, whole=False):
-    """Plot frequency response of a filter.
-
-    This is a convenience function to plot frequency response, and internally uses
-    :func:`scipy.signal.freqz` to estimate the response. For further details, see the
-    documentation for :func:`scipy.signal.freqz`.
-
-    :param b: numerator of a linear filter
-    :param a: denominator of a linear filter
-    :param fs: sampling rate in Hz (optional, normalized frequency if not specified)
-    :param worN: see :func:`scipy.signal.freqz`
-    :param whole: see :func:`scipy.signal.freqz`
-    :returns: (frequency vector, frequency response vector)
-
-    >>> import arlpy
-    >>> arlpy.signal.freqz([1,1,1,1,1], fs=120000);
-    >>> w, h = arlpy.signal.freqz([1,1,1,1,1], fs=120000)
-    """
-    import matplotlib.pyplot as plt
-    w, h = _sig.freqz(b, a, worN, whole)
-    f = w*fs/(2*_np.pi)
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    plt.plot(f, 20*_np.log10(abs(h)), 'b')
-    plt.ylabel('Amplitude [dB]', color='b')
-    plt.xlabel('Frequency [Hz]')
-    plt.grid()
-    ax1.twinx()
-    angles = _np.unwrap(_np.angle(h))
-    plt.plot(f, angles, 'g')
-    plt.ylabel('Angle (radians)', color='g')
-    plt.axis('tight')
-    plt.show()
-    return w, h
-
 def bb2pb(x, fd, fc, fs=None):
     """Convert baseband signal to passband.
 

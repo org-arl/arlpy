@@ -123,10 +123,6 @@ class SignalTestSuite(MyTestCase):
             self.assertApproxEqual(y[0], len(x), precision=6)
             self.assertArrayEqual(y[1:], 0, 'gmseq(%d)'%(j), precision=6)
 
-    def test_freqz(self):
-        # no regression test, since this is a graphics utility function
-        pass
-
     def test_bb2pb2bb(self):
         x = signal.bb2pb(np.ones(1024), 18000, 27000, 108000)
         self.assertArrayEqual(x[108:-108], np.sqrt(2)*np.cos(2*np.pi*27000*signal.time(x,108000))[108:-108], precision=3)
@@ -266,10 +262,6 @@ class CommsTestSuite(MyTestCase):
         self.assertArrayEqual(x, np.array([[1, 1j, -1, -1j, 1, 1j, -1, -1j], [1, -1j, -1, 1j, 1, -1j, -1, 1j]]), precision=4)
         x = comms.fsk(4, 8)
         self.assertEqual(x.shape, (4, 8))
-
-    def test_iqplot(self):
-        # no regression test, since this is a graphics utility function
-        pass
 
     def test_modulation(self):
         x = comms.random_data(1000)
