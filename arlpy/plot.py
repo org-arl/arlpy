@@ -125,7 +125,7 @@ def enable_javascript(b):
     does not affect functionality.
     """
     global _disable_js
-    _disable_js = b
+    _disable_js = not b
 
 def hold(enable):
     """Combine multiple plots into one.
