@@ -12,10 +12,13 @@
 
 import numpy as _np
 import os as _os
-from warnings import warn as _warn
+import warnings as _warnings
+from tempfile import mkstemp as _mkstemp
 import bokeh.plotting as _bplt
 import bokeh.models as _bmodels
 import bokeh.palettes as _bpal
+import bokeh.resources as _bres
+import bokeh.io as _bio
 import scipy.signal as _sig
 
 _figure = None
@@ -27,13 +30,14 @@ _notebook = False
 _disable_js = False
 _using_js = False
 _interactive = True
+_static_images = False
 _colors = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
            'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
 
 try:
     get_ipython                     # check if we are using IPython
     _os.environ['JPY_PARENT_PID']   # and Jupyter
-    _bplt.output_notebook(hide_banner=True)
+    _bplt.output_notebook(resources=_bres.INLINE, hide_banner=True)
     _notebook = True
 except:
     pass                            # not in Jupyter, skip notebook initialization
@@ -91,11 +95,24 @@ def _process_canvas(figures):
     import IPython.display as _ipyd
     _ipyd.display(_ipyd.Javascript(js))
 
+def _show_static_images(f):
+    fh, fname = _mkstemp(suffix='.png')
+    _os.close(fh)
+    with _warnings.catch_warnings():      # to avoid displaying deprecation warning
+        _warnings.simplefilter('ignore')  #   from bokeh 0.12.16
+        _bio.export_png(f, fname)
+    import IPython.display as _ipyd
+    _ipyd.display(_ipyd.Image(filename=fname, embed=True))
+    _os.unlink(fname)
+
 def _show(f):
     if _figures is None:
-        _process_canvas([])
-        _bplt.show(f)
-        _process_canvas([f])
+        if _static_images:
+            _show_static_images(f)
+        else:
+            _process_canvas([])
+            _bplt.show(f)
+            _process_canvas([f])
     else:
         _figures[-1].append(f)
 
@@ -126,6 +143,26 @@ def enable_javascript(b):
     """
     global _disable_js
     _disable_js = not b
+
+def use_static_images(b):
+    """Use static images instead of dynamic HTML/Javascript in Jupyter notebook.
+
+    Static images are useful when the notebook is to be exported as a markdown,
+    LaTeX or PDF document, since dynamic HTML/Javascript is not rendered in these
+    formats. When static images are used, all interactive functionality is disabled.
+
+    To use static images, you must have the following packages installed:
+    selenium, pillow, phantomjs.
+    """
+    global _static_images, _interactive
+    if not b:
+        _static_images = False
+        return
+    if not _notebook:
+        _warnings.warn('Not running in a Jupyter notebook, static png support disabled')
+        return
+    _interactive = False
+    _static_images = True
 
 def hold(enable):
     """Combine multiple plots into one.
@@ -213,9 +250,13 @@ class many_figures:
     def __exit__(self, *args):
         global _figures, _figsize
         if len(_figures) > 1 or len(_figures[0]) > 0:
-            _process_canvas([])
-            _bplt.show(_bplt.gridplot(_figures, merge_tools=False))
-            _process_canvas([item for sublist in _figures for item in sublist])
+            f = _bplt.gridplot(_figures, merge_tools=False)
+            if _static_images:
+                _show_static_images(f)
+            else:
+                _process_canvas([])
+                _bplt.show(f)
+                _process_canvas([item for sublist in _figures for item in sublist])
         _figures = None
         _figsize = self.ofigsize
 
@@ -303,7 +344,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
             desc += ', '+pooling+' pooled'
             y = _np.mean(_np.reshape(y[:n*(y.size//n)], (-1, n)), axis=1)
         else:
-            _warn('Unknown pooling: '+pooling)
+            _warnings.warn('Unknown pooling: '+pooling)
             y = y[::n]
         _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text=desc, text_font_size="8pt", text_alpha=0.5))
     if style is not None:
@@ -363,7 +404,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     elif marker == '^':
         _figure.triangle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker is not None:
-        _warn('Bad marker type: '+marker)
+        _warnings.warn('Bad marker type: '+marker)
     if not hold and not _hold:
         _show(_figure)
         _figure = None
