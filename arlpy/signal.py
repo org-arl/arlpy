@@ -37,13 +37,14 @@ def time(n, fs):
         n = len(n)
     return _np.arange(n, dtype=_np.float)/fs
 
-def cw(fc, duration, fs, window=None):
+def cw(fc, duration, fs, window=None, complex_output=False):
     """Generate a sinusoidal pulse.
 
     :param fc: frequency of the pulse in Hz
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
     :param window: window function to use (``None`` means rectangular window)
+    :param complex_output: True to return complex signal, False for a real signal
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
@@ -53,7 +54,7 @@ def cw(fc, duration, fs, window=None):
     >>> x3 = arlpy.signal.cw(fc=27000, duration=0.5, fs=250000, window=('kaiser', 4.0))
     """
     n = int(round(duration*fs))
-    x = _np.sin(2*_np.pi*fc*time(n, fs))
+    x = _np.exp(2j*_np.pi*fc*time(n, fs)) if complex_output else _np.sin(2*_np.pi*fc*time(n, fs))
     if window is not None:
         w = _sig.get_window(window, n)
         x *= w

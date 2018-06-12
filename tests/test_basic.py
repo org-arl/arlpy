@@ -92,6 +92,7 @@ class SignalTestSuite(MyTestCase):
 
     def test_cw(self):
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, complex_output=True), np.exp(2j*np.pi*10000*np.arange(5000, dtype=np.complex)/50000), precision=6)
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
 
     def test_sweep(self):
