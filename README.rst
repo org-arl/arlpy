@@ -43,6 +43,13 @@ To import all general modules::
 
     import arlpy
 
+Notes
+-----
+
+Png export of bokeh plots requires `selenium`, `pillow` and `phantomjs`. These are not
+installed as automatic depdendencies, since they are optional and only required
+for png export. These should be installed manually, if desired.
+
 Useful links
 ------------
 
