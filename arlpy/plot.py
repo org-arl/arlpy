@@ -144,7 +144,7 @@ def enable_javascript(b):
     global _disable_js
     _disable_js = not b
 
-def use_static_images(b):
+def use_static_images(b=True):
     """Use static images instead of dynamic HTML/Javascript in Jupyter notebook.
 
     Static images are useful when the notebook is to be exported as a markdown,
