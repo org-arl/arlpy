@@ -56,7 +56,7 @@ def cw(fc, duration, fs, window=None, complex_output=False):
     n = int(round(duration*fs))
     x = _np.exp(2j*_np.pi*fc*time(n, fs)) if complex_output else _np.sin(2*_np.pi*fc*time(n, fs))
     if window is not None:
-        w = _sig.get_window(window, n)
+        w = _sig.get_window(window, n, False)
         x *= w
     return x
 
@@ -80,7 +80,7 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
     n = int(round(duration*fs))
     x = _sig.chirp(time(n, fs), f1, duration, f2, method)
     if window is not None:
-        w = _sig.get_window(window, n)
+        w = _sig.get_window(window, n, False)
         x *= w
     return x
 
