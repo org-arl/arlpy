@@ -298,7 +298,7 @@ class _Bellhop:
             self._print(fh, "0.0 %0.1f /" % (svp))
             self._print(fh, "%0.1f %0.1f /" % (max_depth, svp))
         else:
-            for j in svp.shape[0]:
+            for j in range(svp.shape[0]):
                 self._print(fh, "%0.1f %0.1f /" % (svp[j,0], svp[j,1]))
         depth = env['depth']
         if _np.size(depth) == 1:
@@ -321,7 +321,7 @@ class _Bellhop:
         with open(filename, 'wt') as f:
             f.write("'L'\n")
             f.write(str(_np.size(depth))+"\n")
-            for j in depth.shape[0]:
+            for j in range(depth.shape[0]):
                 f.write("%0.4f %0.1f\n" % (depth[j,0]/1000, depth[j,1]))
 
     def _readf(self, f, types):
@@ -381,10 +381,10 @@ class _Bellhop:
                 ray = _np.empty((pts, 2))
                 for k in range(pts):
                     ray[k,:] = self._readf(f, (float, float))
-                rays.append({
-                    'angle_of_departure': a*_np.pi/180,
-                    'surface_bounces': sb,
-                    'bottom_bounces': bb,
-                    'ray': ray
-                })
-        return rays
+                rays.append(_pd.DataFrame({
+                    'angle_of_departure': [a*_np.pi/180],
+                    'surface_bounces': [sb],
+                    'bottom_bounces': [bb],
+                    'ray': [ray]
+                }))
+        return _pd.concat(rays)
