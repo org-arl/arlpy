@@ -11,6 +11,7 @@
 """Underwater acoustics propagation modeling toolbox."""
 
 import os as _os
+import subprocess as _proc
 import numpy as _np
 from tempfile import mkstemp as _mkstemp
 
@@ -60,7 +61,8 @@ def create_env2d(**kv):
         'depth': 25                   # m
     }
     for k, v in kv.items():
-        assert k in env.keys(), 'Unknown key: '+k
+        if k not in env.keys():
+            raise KeyError('Unknown key: '+k)
         env[k] = _np.asarray(v, dtype=_np.float) if _np.size(v) > 1 else v
     check_env2d(env)
     return env
@@ -76,22 +78,25 @@ def check_env2d(env):
     >>> env = pm.create_env2d()
     >>> check_env2d(env)
     """
-    max_range = _np.max(env['rx_range'])
-    if _np.size(env['depth']) > 1:
-        assert env['depth'].ndim == 2, 'depth must be a scalar or a Nx2 array'
-        assert env['depth'].shape[1] == 2, 'depth must be a scalar or a Nx2 array'
-        assert env['depth'][0,0] == 0, 'First range in depth array must be 0 m'
-        assert env['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
-        max_depth = _np.max(env['depth'][:,1])
-    else:
-        max_depth = env['depth']
-    if _np.size(env['soundspeed']) > 1:
-        assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or a Nx2 array'
-        assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or a Nx2 array'
-        assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
-        assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
-    assert env['tx_depth'] <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
-    assert env['rx_depth'] <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
+    try:
+        max_range = _np.max(env['rx_range'])
+        if _np.size(env['depth']) > 1:
+            assert env['depth'].ndim == 2, 'depth must be a scalar or a Nx2 array'
+            assert env['depth'].shape[1] == 2, 'depth must be a scalar or a Nx2 array'
+            assert env['depth'][0,0] == 0, 'First range in depth array must be 0 m'
+            assert env['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
+            max_depth = _np.max(env['depth'][:,1])
+        else:
+            max_depth = env['depth']
+        if _np.size(env['soundspeed']) > 1:
+            assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or a Nx2 array'
+            assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or a Nx2 array'
+            assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
+            assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
+        assert env['tx_depth'] <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
+        assert env['rx_depth'] <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
+    except AssertionError as e:
+        raise ValueError(e.args)
 
 def print_env(env):
     """Display the environment in a human readable form.
@@ -113,104 +118,186 @@ def print_env(env):
         else:
             print('%20s : '%(k) + v)
 
-def _print(fh, s):
-    _os.write(fh, s.encode())
+def compute_arrivals(env, model=None, debug=False):
+    """Compute arrivals between each transmitter and receiver.
 
-def _println(fh, s):
-    _os.write(fh, (s+'\n').encode())
+    :param env: environment definition
+    :param model: propagation model to use (None to auto-select)
+    :param debug: generate debug information for propagation model
+    :returns: arrival times and coefficients for all transmitter-receiver combinations
+    """
+    model = _select_model(env, 'arrivals', model)
+    return model.run(env, 'arrivals', debug)
 
-def _printarr(fh, a):
-    if _np.size(a) == 1:
-        _println(fh, "1")
-        _println(fh, "%0.1f /" % (a))
-    else:
-        _println(fh, str(_np.size(a)))
-        for j in a:
-            _print(fh, "%0.1f " % (j))
-        _println(fh, "/")
+def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False):
+    """Compute eigenrays between a given transmitter and receiver.
 
-def _unlink(f):
-    try:
-        os.unlink(f)
-    except:
-        pass
+    :param env: environment definition
+    :param tx_depth_ndx: transmitter depth index
+    :param rx_depth_ndx: receiver depth index
+    :param rx_range_ndx: receiver range index
+    :param model: propagation model to use (None to auto-select)
+    :param debug: generate debug information for propagation model
+    :returns: eigenrays paths
+    """
+    env = env.copy()
+    if _np.size(env['tx_depth']) > 1:
+        env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
+    if _np.size(env['rx_depth']) > 1:
+        env['rx_depth'] = env['rx_depth'][rx_depth_ndx]
+    if _np.size(env['rx_range']) > 1:
+        env['rx_range'] = env['rx_range'][rx_range_ndx]
+    model = _select_model(env, 'eigenrays', model)
+    return model.run(env, 'eigenrays', debug)
 
-def _bellhop(env, type, debug=False):
-    # generate environment file
-    fh, fname = _mkstemp(suffix='.env')
-    fname_base = fname[:-4]
-    _println(fh, "'"+env['name']+"'")
-    _println(fh, "%0.1f" % (env['frequency']))
-    _println(fh, "1")
-    _println(fh, "'CVWT'")
-    max_depth = env['max_depth']
-    _println(fh, "1 0.0 %0.1f" % (max_depth))
-    svp = env['soundspeed']
-    if _np.size(svp) == 1:
-        _println(fh, "0.0 %0.1f /" % (svp))
-        _println(fh, "%0.1f %0.1f /" % (max_depth, svp))
-    else:
-        for j in svp.shape[0]:
-            _println(fh, "%0.1f %0.1f /" % (svp[j,0], svp[j,1]))
-    depth = env['depth']
-    if _np.size(depth) == 1:
-        _println(fh, "'A' %0.3f" % (env['bottom_roughness']))
-    else:
-        _println(fh, "'A*' %0.3f" % (env['bottom_roughness']))
-        with open(fname_base+'.bty', 'wt') as f:
+def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
+    """Compute rays from a given transmitter.
+
+    :param env: environment definition
+    :param tx_depth_ndx: transmitter depth index
+    :param model: propagation model to use (None to auto-select)
+    :param debug: generate debug information for propagation model
+    :returns: ray paths
+    """
+    if _np.size(env['tx_depth']) > 1:
+        env = env.copy()
+        env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
+    model = _select_model(env, 'rays', model)
+    return model.run(env, 'rays', debug)
+
+def compute_transmission_loss(env, tx_depth_ndx=0, mode='coherent', model=None, debug=False):
+    """Compute transmission loss from a given transmitter to all receviers.
+
+    :param env: environment definition
+    :param tx_depth_ndx: transmitter depth index
+    :param mode: 'coherent', 'incoherent' or 'semicoherent'
+    :param model: propagation model to use (None to auto-select)
+    :param debug: generate debug information for propagation model
+    :returns: transmission loss in dB at each receiver depth and range
+    """
+    if mode not in ['coherent', 'incoherent', 'semicoherent']:
+        raise ValueError('Unknown transmission loss mode: '+mode)
+    if _np.size(env['tx_depth']) > 1:
+        env = env.copy()
+        env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
+    model = _select_model(env, mode, model)
+    return model.run(env, mode, debug)
+
+def arrivals_to_impulse_response(arrivals, fs):
+    """Convert arrival times and coefficients to an impulse response.
+
+    :param arrivals: list of arrivals times (s) and coefficients
+    :param fs: sampling rate (Hz)
+    :returns: impulse response
+    """
+    pass
+
+def _select_model(env, task, model):
+    if model is not None:
+        if model == 'bellhop':
+            return _Bellhop()
+        raise ValueError('Unknown model: '+model)
+    for m in [_Bellhop()]:
+        if m.supports(env, task):
+            return m
+    raise ValueError('No suitable propagation model available')
+
+class _Bellhop:
+
+    def __init__(self):
+        self.executable = 'bellhop.exe'
+        self.taskmap = {
+            'arrivals': 'A',
+            'eigenrays': 'E',
+            'rays': 'R',
+            'coherent': 'C',
+            'incoherent': 'I',
+            'semicoherent': 'S'
+        }
+
+    def supports(self, env, task):
+        return self._bellhop()
+
+    def run(self, env, task, debug=False):
+        fname_base = self._create_env_file(env, task)
+        if self._bellhop(fname_base):
+            results = True # TODO
+        else:
+            results = None
+        if debug:
+            print('[DEBUG] Bellhop working files: '+fname_base+'.*')
+        else:
+            self._unlink(fname_base+'.env')
+            self._unlink(fname_base+'.bty')
+            self._unlink(fname_base+'.prt')
+            self._unlink(fname_base+'.arr')
+            self._unlink(fname_base+'.ray')
+            self._unlink(fname_base+'.shd')
+        return results
+
+    def _bellhop(self, *args):
+        try:
+            _proc.check_output([self.executable] + list(args), stderr=_proc.STDOUT)
+        except OSError:
+            return False
+        return True
+
+    def _unlink(self, f):
+        try:
+            os.unlink(f)
+        except:
+            pass
+
+    def _print(self, fh, s, newline=True):
+        _os.write(fh, (s+'\n' if newline else s).encode())
+
+    def _print_array(self, fh, a):
+        if _np.size(a) == 1:
+            self._print(fh, "1")
+            self._print(fh, "%0.1f /" % (a))
+        else:
+            self._print(fh, str(_np.size(a)))
+            for j in a:
+                self._print(fh, "%0.1f " % (j), newline=False)
+            self._print(fh, "/")
+
+    def _create_env_file(self, env, task):
+        task = self.taskmap[task]
+        fh, fname = _mkstemp(suffix='.env')
+        fname_base = fname[:-4]
+        self._print(fh, "'"+env['name']+"'")
+        self._print(fh, "%0.1f" % (env['frequency']))
+        self._print(fh, "1")
+        self._print(fh, "'CVWT'")
+        max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
+        self._print(fh, "1 0.0 %0.1f" % (max_depth))
+        svp = env['soundspeed']
+        if _np.size(svp) == 1:
+            self._print(fh, "0.0 %0.1f /" % (svp))
+            self._print(fh, "%0.1f %0.1f /" % (max_depth, svp))
+        else:
+            for j in svp.shape[0]:
+                self._print(fh, "%0.1f %0.1f /" % (svp[j,0], svp[j,1]))
+        depth = env['depth']
+        if _np.size(depth) == 1:
+            self._print(fh, "'A' %0.3f" % (env['bottom_roughness']))
+        else:
+            self._print(fh, "'A*' %0.3f" % (env['bottom_roughness']))
+            self._create_bty_file(fname_base+'.bty', depth)
+        self._print(fh, "%0.1f %0.1f 0.0 %0.4f %0.1f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density'], env['bottom_absorption']))
+        self._print_array(fh, env['tx_depth'])
+        self._print_array(fh, env['rx_depth'])
+        self._print_array(fh, env['rx_range']/1000)
+        self._print(fh, "'"+task+"'")
+        self._print(fh, "0")
+        self._print(fh, "-89.0 89.0 /")
+        self._print(fh, "0.0 %0.1f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
+        _os.close(fh)
+        return fname_base
+
+    def _create_bty_file(self, filename, depth):
+        with open(filename, 'wt') as f:
             f.write("'L'\n")
             f.write(str(_np.size(depth))+"\n")
             for j in depth.shape[0]:
                 f.write("%0.4f %0.1f\n" % (depth[j,0]/1000, depth[j,1]))
-    _println(fh, "%0.1f %0.1f 0.0 %0.4f %0.1f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density'], env['bottom_absorption']))
-    _printarr(fh, env['tx_depth'])
-    _printarr(fh, env['rx_depth'])
-    _printarr(fh, env['rx_range']/1000)
-    _println(fh, "'"+type+"'")
-    _println(fh, "0")
-    _println(fh, "-89.0 89.0 /")
-    _println(fh, "0.0 %0.1f %0.4f" % (1.01*max_depth, 1.01*env['max_range']/1000))
-    _os.close(fh)
-    # run bellhop
-    rv = _os.system('bellhop.exe '+fname_base)
-    if debug:
-        print('[DEBUG] Bellhop files not deleted: '+fname_base+'.*')
-    else:
-        _unlink(fname)
-        _unlink(fname_base+'.bty')
-        _unlink(fname_base+'.prt')
-    assert rv == 0, 'Error running bellhop.exe - please install acoustic toolbox from http://oalib.hlsresearch.com/Modes/AcousticsToolbox/'
-    # load results file
-    # TODO
-    if not debug:
-        _unlink(fname_base+'.arr')
-        _unlink(fname_base+'.ray')
-        _unlink(fname_base+'.shd')
-
-def _jasa2007(env, type):
-    assert type == 'A', 'jasa2007 model only supports arrivals'
-    assert False, 'jasa2007 unimplemented'
-    pass
-
-def pm_simulate(env, type='arrivals', model='auto', debug=False):
-    """Use an acoustic propagation model to simulate an underwater environment.
-    """
-    if model == 'bellhop':
-        model = _bellhop
-    elif model == 'jasa2007':
-        model = _jasa2007
-    elif model == 'auto':
-        if type == 'arrivals' and _np.size(env['soundspeed']) == 1 and _np.size(env['depth']) == 1:
-            model = _jasa2007
-        else:
-            model = _bellhop
-    if type == 'arrivals':
-        return model(env, 'A', debug)
-    elif type == 'eigenrays':
-        return model(env, 'E', debug)
-    elif type == 'coherent':
-        return model(env, 'C', debug)
-    elif type == 'incoherent':
-        return model(env, 'I', debug)
-    elif type == 'semicoherent':
-        return model(env, 'S', debug)
