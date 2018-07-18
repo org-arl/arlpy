@@ -136,6 +136,10 @@ def compute_arrivals(env, model=None, debug=False):
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
     :returns: arrival times and coefficients for all transmitter-receiver combinations
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d()
+    >>> arrivals = pm.compute_arrivals(env)
     """
     model = _select_model(env, 'arrivals', model)
     return model.run(env, 'arrivals', debug)
@@ -150,6 +154,10 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
     :returns: eigenrays paths
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d()
+    >>> arrivals = pm.compute_eigenrays(env)
     """
     env = env.copy()
     if _np.size(env['tx_depth']) > 1:
@@ -169,6 +177,10 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
     :returns: ray paths
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d()
+    >>> arrivals = pm.compute_rays(env)
     """
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
@@ -185,6 +197,10 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode='coherent', model=None, 
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
     :returns: transmission loss in dB at each receiver depth and range
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d()
+    >>> arrivals = pm.compute_transmission_loss(env, mode='incoherent')
     """
     if mode not in ['coherent', 'incoherent', 'semicoherent']:
         raise ValueError('Unknown transmission loss mode: '+mode)
@@ -204,6 +220,11 @@ def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
 
     If `abs_time` is set to True, the impulse response is placed such that
     the zero time corresponds to the time of transmission of signal.
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d()
+    >>> arrivals = pm.compute_arrivals(env)
+    >>> ir = pm.arrivals_to_impulse_response(arrivals, fs=192000)
     """
     t0 = 0 if abs_time else min(arrivals.time_of_arrival)
     irlen = int(_np.ceil((max(arrivals.time_of_arrival)-t0)*fs))+1
@@ -222,6 +243,8 @@ def _select_model(env, task, model):
         if m.supports(env, task):
             return m
     raise ValueError('No suitable propagation model available')
+
+### Bellhop propagation model ###
 
 class _Bellhop:
 
