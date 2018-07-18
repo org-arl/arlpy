@@ -8,11 +8,18 @@
 #
 ##############################################################################
 
-"""Underwater acoustics propagation modeling toolbox."""
+"""Underwater acoustics propagation modeling toolbox.
+
+This toolbox currently uses the Bellhop acoustic propagation model. For this model
+to work, the `acoustic toolbox <http://oalib.hlsresearch.com/Modes/AcousticsToolbox/>`_
+must be installed on your computer and `bellhop.exe` should be in your PATH.
+"""
 
 import os as _os
+import re as _re
 import subprocess as _proc
 import numpy as _np
+import pandas as _pd
 from tempfile import mkstemp as _mkstemp
 
 def create_env2d(**kv):
@@ -58,7 +65,9 @@ def create_env2d(**kv):
         'tx_depth': 5,                # m
         'rx_depth': 10,               # m
         'rx_range': 1000,             # m
-        'depth': 25                   # m
+        'depth': 25,                  # m
+        'min_angle': -0.9*_np.pi/2,   # rad
+        'max_angle': 0.9*_np.pi/2     # rad
     }
     for k, v in kv.items():
         if k not in env.keys():
@@ -95,6 +104,8 @@ def check_env2d(env):
             assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
         assert env['tx_depth'] <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert env['rx_depth'] <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
+        assert env['min_angle'] > -_np.pi/2 and env['min_angle'] < _np.pi/2, 'min_angle must be in range (-pi/2, pi/2)'
+        assert env['max_angle'] > -_np.pi/2 and env['max_angle'] < _np.pi/2, 'max_angle must be in range (-pi/2, pi/2)'
     except AssertionError as e:
         raise ValueError(e.args)
 
@@ -183,14 +194,24 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode='coherent', model=None, 
     model = _select_model(env, mode, model)
     return model.run(env, mode, debug)
 
-def arrivals_to_impulse_response(arrivals, fs):
+def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
     """Convert arrival times and coefficients to an impulse response.
 
     :param arrivals: list of arrivals times (s) and coefficients
     :param fs: sampling rate (Hz)
+    :param abs_time: absolute time (True) or relative time (False)
     :returns: impulse response
+
+    If `abs_time` is set to True, the impulse response is placed such that
+    the zero time corresponds to the time of transmission of signal.
     """
-    pass
+    t0 = 0 if abs_time else min(arrivals.time_of_arrival)
+    irlen = int(_np.ceil((max(arrivals.time_of_arrival)-t0)*fs))+1
+    ir = _np.zeros(irlen, dtype=_np.complex)
+    for _, row in arrivals.iterrows():
+        ndx = int(_np.round((row.time_of_arrival.real-t0)*fs))
+        ir[ndx] = row.arrival_amplitude
+    return ir
 
 def _select_model(env, task, model):
     if model is not None:
@@ -205,23 +226,25 @@ def _select_model(env, task, model):
 class _Bellhop:
 
     def __init__(self):
-        self.executable = 'bellhop.exe'
-        self.taskmap = {
-            'arrivals': 'A',
-            'eigenrays': 'E',
-            'rays': 'R',
-            'coherent': 'C',
-            'incoherent': 'I',
-            'semicoherent': 'S'
-        }
+        pass
 
     def supports(self, env, task):
+        if task == 'coherent' or task == 'incoherent' or task == 'semicoherent':
+            return False
         return self._bellhop()
 
     def run(self, env, task, debug=False):
-        fname_base = self._create_env_file(env, task)
+        taskmap = {
+            'arrivals':     ['A', self._load_arrivals],
+            'eigenrays':    ['E', self._load_rays],
+            'rays':         ['R', self._load_rays],
+            'coherent':     ['C', None],
+            'incoherent':   ['I', None],
+            'semicoherent': ['S', None]
+        }
+        fname_base = self._create_env_file(env, taskmap[task][0])
         if self._bellhop(fname_base):
-            results = True # TODO
+            results = taskmap[task][1](fname_base)
         else:
             results = None
         if debug:
@@ -237,7 +260,7 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            _proc.check_output([self.executable] + list(args), stderr=_proc.STDOUT)
+            _proc.check_output(['bellhop.exe'] + list(args), stderr=_proc.STDOUT)
         except OSError:
             return False
         return True
@@ -261,8 +284,7 @@ class _Bellhop:
                 self._print(fh, "%0.1f " % (j), newline=False)
             self._print(fh, "/")
 
-    def _create_env_file(self, env, task):
-        task = self.taskmap[task]
+    def _create_env_file(self, env, taskcode):
         fh, fname = _mkstemp(suffix='.env')
         fname_base = fname[:-4]
         self._print(fh, "'"+env['name']+"'")
@@ -288,9 +310,9 @@ class _Bellhop:
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
         self._print_array(fh, env['rx_range']/1000)
-        self._print(fh, "'"+task+"'")
+        self._print(fh, "'"+taskcode+"'")
         self._print(fh, "0")
-        self._print(fh, "-89.0 89.0 /")
+        self._print(fh, "%0.1f %0.1f /" % (env['min_angle']*180/_np.pi, env['max_angle']*180/_np.pi))
         self._print(fh, "0.0 %0.1f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
         _os.close(fh)
         return fname_base
@@ -301,3 +323,68 @@ class _Bellhop:
             f.write(str(_np.size(depth))+"\n")
             for j in depth.shape[0]:
                 f.write("%0.4f %0.1f\n" % (depth[j,0]/1000, depth[j,1]))
+
+    def _readf(self, f, types):
+        p = _re.split(r' +', f.readline().strip())
+        for j in range(len(p)):
+            if len(types) > j:
+                p[j] = types[j](p[j])
+        return tuple(p)
+
+    def _load_arrivals(self, fname_base):
+        with open(fname_base+'.arr', 'rt') as f:
+            freq, tx_depth_count, rx_depth_count, rx_range_count = self._readf(f, (float, int, int, int))
+            tx_depth = self._readf(f, (float,)*tx_depth_count)
+            rx_depth = self._readf(f, (float,)*rx_depth_count)
+            rx_range = self._readf(f, (float,)*rx_range_count)
+            arrivals = []
+            for j in range(tx_depth_count):
+                f.readline()
+                for k in range(rx_depth_count):
+                    for m in range(rx_range_count):
+                        count = int(f.readline())
+                        for n in range(count):
+                            data = self._readf(f, (float, float, float, float, float, float, int, int))
+                            arrivals.append(_pd.DataFrame({
+                                'tx_depth_ndx': [j],
+                                'rx_depth_ndx': [k],
+                                'rx_range_ndx': [m],
+                                'tx_depth': [tx_depth[j]],
+                                'rx_depth': [rx_depth[k]],
+                                'rx_range': [rx_range[m]],
+                                'arrival_number': [n],
+                                'arrival_amplitude': [data[0]*_np.exp(1j*data[1])],
+                                'time_of_arrival': [data[2]],
+                                'angle_of_departure': [data[4]*_np.pi/180],
+                                'angle_of_arrival': [data[5]*_np.pi/180],
+                                'surface_bounces': [data[6]],
+                                'bottom_bounces': [data[7]]
+                            }, index=[len(arrivals)+1]))
+        return _pd.concat(arrivals)
+
+    def _load_rays(self, fname_base):
+        with open(fname_base+'.ray', 'rt') as f:
+            f.readline()
+            f.readline()
+            f.readline()
+            f.readline()
+            f.readline()
+            f.readline()
+            f.readline()
+            rays = []
+            while True:
+                s = f.readline()
+                if s is None or len(s.strip()) == 0:
+                    break
+                a = float(s)
+                pts, sb, bb = self._readf(f, (int, int, int))
+                ray = _np.empty((pts, 2))
+                for k in range(pts):
+                    ray[k,:] = self._readf(f, (float, float))
+                rays.append({
+                    'angle_of_departure': a*_np.pi/180,
+                    'surface_bounces': sb,
+                    'bottom_bounces': bb,
+                    'ray': ray
+                })
+        return rays
