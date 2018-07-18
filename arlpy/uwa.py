@@ -10,11 +10,9 @@
 
 """Underwater acoustics toolbox."""
 
-import os as _os
 import numbers as _num
 import numpy as _np
 import scipy.signal as _sp
-from tempfile import mkstemp as _mkstemp
 
 def soundspeed(temperature=27, salinity=35, depth=10):
     """Get the speed of sound in water.
@@ -169,114 +167,3 @@ def doppler(speed, frequency, c=soundspeed()):
     49967.51
     """
     return (1+speed/float(c))*frequency        # approximation holds when speed << c
-
-def pm_environment(**env):
-    """Define an environment for an underwater acoustic propagation model.
-    """
-    e = {
-        'frequency': 25000,
-        'soundspeed': 1500,
-        'bottom_soundspeed': 1600,
-        'bottom_density': 1.6,
-        'bottom_absorption': 0.1,
-        'bottom_roughness': 0,
-        'tx_depth': 5,
-        'rx_depth': 10,
-        'rx_range': 1000,
-        'depth': 25
-    }
-    for k, v in env.items():
-        assert k in e.keys(), 'Unknown key: '+k
-        e[k] = _np.asarray(v, dtype=_np.float) if _np.size(v) > 1 else v
-    max_range = _np.max(e['rx_range'])
-    if _np.size(e['depth']) > 1:
-        assert e['depth'].ndim == 2, 'depth must be a scalar or a Nx2 array'
-        assert e['depth'].shape[1] == 2, 'depth must be a scalar or a Nx2 array'
-        assert e['depth'][0,0] == 0, 'First range in depth array must be 0 m'
-        assert e['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
-        max_depth = _np.max(e['depth'][:,1])
-    else:
-        max_depth = e['depth']
-    if _np.size(e['soundspeed']) > 1:
-        assert e['soundspeed'].ndim == 2, 'soundspeed must be a scalar or a Nx2 array'
-        assert e['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or a Nx2 array'
-        assert e['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
-        assert e['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
-    assert e['tx_depth'] <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
-    assert e['rx_depth'] <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
-    e['max_range'] = max_range
-    e['max_depth'] = max_depth
-    return e
-
-def _bellhop(env, type):
-    assert _os.system('which bellhop.exe') == 0, 'bellhop.exe not found, please install acoustic toolbox from http://oalib.hlsresearch.com/Modes/AcousticsToolbox/'
-    # generate environment file
-    fh, fname = _mkstemp(suffix='.env')
-    _os.write(fh, "'arlpy_uwa'\n".encode())                         # name
-    _os.write(fh, (str(env['frequency'])+"\n").encode())            # frequency
-    _os.write(fh, "1\n'CVWT'\n".encode())                           # nmedia, sspopt
-    max_depth = env['max_depth']
-    _os.write(fh, ("1 0.0 "+str(max_depth)+"\n").encode())          # depth
-    svp = env['soundspeed']
-    if _np.size(svp) == 1:
-        _os.write(fh, ("0.0 "+str(svp)+" /\n"+str(max_depth)+" "+str(svp)+" /\n").encode())
-    else:
-        for j in svp.shape[0]:
-            _os.write(fh, (str(svp[j,0])+" "+str(svp[j,1])+" /\n").encode())
-    depth = env['depth']
-    if _np.size(depth) == 1:
-        _os.write(fh, ("'A' "+str(env['bottom_roughness'])+"\n").encode())
-    else:
-        # TODO: create bathy file
-        _os.write(fh, ("'A*' "+str(env['bottom_roughness'])+"\n").encode())
-
-# fprintf(f,'%0.1f %0.1f 0.0 %0.4f %0.1f /\n',env.depth,env.bottom(1),env.bottom(2),env.bottom(3));
-# fprintf(f,'%i\n',length(env.txdepth));
-# fprintf(f,'%0.1f ',env.txdepth);
-# fprintf(f,'/\n');
-# fprintf(f,'%i\n',length(env.rxdepth));
-# fprintf(f,'%0.1f ',env.rxdepth);
-# fprintf(f,'/\n');
-# fprintf(f,'%i\n',length(env.rxrange));
-# fprintf(f,'%0.4f ',env.rxrange/1000);
-# fprintf(f,'/\n');
-# fprintf(f,'''%s''\n',model.stype);
-# fprintf(f,'%i\n%0.1f %0.1f /\n',model.nBeams,-model.alpha,model.alpha);
-# fprintf(f,'0.0 %0.1f %0.4f\n',1.01*max(env.depth),1.01*max(env.rxrange)/1000);
-# err = [];
-
-    _os.close(fh)
-    # run bellhop
-    fname_base = fname[:-4]
-    rv = _os.system('bellhop.exe '+fname_base)
-    _os.unlink(fname)
-    assert rv == 0, 'Error running bellhop.exe'
-    # load results file
-
-def _jasa2007(env, type):
-    assert type == 'A', 'jasa2007 model only supports arrivals'
-    assert False, 'jasa2007 unimplemented'
-    pass
-
-def pm_simulate(env, type='arrivals', model='auto'):
-    """Use an acoustic propagation model to simulate an underwater environment.
-    """
-    if model == 'bellhop':
-        model = _bellhop
-    elif model == 'jasa2007':
-        model = _jasa2007
-    elif model == 'auto':
-        if type == 'arrivals' and _np.size(env['soundspeed']) == 1 and _np.size(env['depth']) == 1:
-            model = _jasa2007
-        else:
-            model = _bellhop
-    if type == 'arrivals':
-        return model(env, 'A')
-    elif type == 'eigenrays':
-        return model(env, 'E')
-    elif type == 'coherent':
-        return model(env, 'C')
-    elif type == 'incoherent':
-        return model(env, 'I')
-    elif type == 'semicoherent':
-        return model(env, 'S')
