@@ -61,7 +61,7 @@ def create_env2d(**kv):
         'frequency': 25000,           # Hz
         'soundspeed': 1500,           # m/s
         'bottom_soundspeed': 1600,    # m/s
-        'bottom_density': 1.6,        # kg/m^3
+        'bottom_density': 1600,       # kg/m^3
         'bottom_absorption': 0.1,     # dB/wavelength
         'bottom_roughness': 0,        # m (rms)
         'tx_depth': 5,                # m
@@ -372,7 +372,7 @@ class _Bellhop:
         else:
             self._print(fh, "'A*' %0.3f" % (env['bottom_roughness']))
             self._create_bty_file(fname_base+'.bty', depth)
-        self._print(fh, "%0.1f %0.1f 0.0 %0.4f %0.1f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density'], env['bottom_absorption']))
+        self._print(fh, "%0.1f %0.1f 0.0 %0.4f %0.1f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
         self._print_array(fh, env['rx_range']/1000)
@@ -386,7 +386,7 @@ class _Bellhop:
     def _create_bty_file(self, filename, depth):
         with open(filename, 'wt') as f:
             f.write("'L'\n")
-            f.write(str(_np.size(depth))+"\n")
+            f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
                 f.write("%0.4f %0.1f\n" % (depth[j,0]/1000, depth[j,1]))
 
