@@ -21,6 +21,7 @@ import subprocess as _proc
 import numpy as _np
 import pandas as _pd
 from tempfile import mkstemp as _mkstemp
+from struct import unpack as _unpack
 import arlpy.plot as _plt
 import bokeh as _bokeh
 
@@ -104,8 +105,8 @@ def check_env2d(env):
             assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or a Nx2 array'
             assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
             assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
-        assert env['tx_depth'] <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
-        assert env['rx_depth'] <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
+        assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
+        assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert env['min_angle'] > -_np.pi/2 and env['min_angle'] < _np.pi/2, 'min_angle must be in range (-pi/2, pi/2)'
         assert env['max_angle'] > -_np.pi/2 and env['max_angle'] < _np.pi/2, 'max_angle must be in range (-pi/2, pi/2)'
     except AssertionError as e:
@@ -295,8 +296,6 @@ class _Bellhop:
         pass
 
     def supports(self, env, task):
-        if task == 'coherent' or task == 'incoherent' or task == 'semicoherent':
-            return False
         return self._bellhop()
 
     def run(self, env, task, debug=False):
@@ -304,9 +303,9 @@ class _Bellhop:
             'arrivals':     ['A', self._load_arrivals],
             'eigenrays':    ['E', self._load_rays],
             'rays':         ['R', self._load_rays],
-            'coherent':     ['C', None],
-            'incoherent':   ['I', None],
-            'semicoherent': ['S', None]
+            'coherent':     ['C', self._load_shd],
+            'incoherent':   ['I', self._load_shd],
+            'semicoherent': ['S', self._load_shd]
         }
         fname_base = self._create_env_file(env, taskmap[task][0])
         if self._bellhop(fname_base):
@@ -343,43 +342,43 @@ class _Bellhop:
     def _print_array(self, fh, a):
         if _np.size(a) == 1:
             self._print(fh, "1")
-            self._print(fh, "%0.1f /" % (a))
+            self._print(fh, "%0.4f /" % (a))
         else:
             self._print(fh, str(_np.size(a)))
             for j in a:
-                self._print(fh, "%0.1f " % (j), newline=False)
+                self._print(fh, "%0.4f " % (j), newline=False)
             self._print(fh, "/")
 
     def _create_env_file(self, env, taskcode):
         fh, fname = _mkstemp(suffix='.env')
         fname_base = fname[:-4]
         self._print(fh, "'"+env['name']+"'")
-        self._print(fh, "%0.1f" % (env['frequency']))
+        self._print(fh, "%0.4f" % (env['frequency']))
         self._print(fh, "1")
         self._print(fh, "'CVWT'")
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
-        self._print(fh, "1 0.0 %0.1f" % (max_depth))
+        self._print(fh, "1 0.0 %0.4f" % (max_depth))
         svp = env['soundspeed']
         if _np.size(svp) == 1:
-            self._print(fh, "0.0 %0.1f /" % (svp))
-            self._print(fh, "%0.1f %0.1f /" % (max_depth, svp))
+            self._print(fh, "0.0 %0.4f /" % (svp))
+            self._print(fh, "%0.4f %0.4f /" % (max_depth, svp))
         else:
             for j in range(svp.shape[0]):
-                self._print(fh, "%0.1f %0.1f /" % (svp[j,0], svp[j,1]))
+                self._print(fh, "%0.4f %0.4f /" % (svp[j,0], svp[j,1]))
         depth = env['depth']
         if _np.size(depth) == 1:
-            self._print(fh, "'A' %0.3f" % (env['bottom_roughness']))
+            self._print(fh, "'A' %0.4f" % (env['bottom_roughness']))
         else:
-            self._print(fh, "'A*' %0.3f" % (env['bottom_roughness']))
+            self._print(fh, "'A*' %0.4f" % (env['bottom_roughness']))
             self._create_bty_file(fname_base+'.bty', depth)
-        self._print(fh, "%0.1f %0.1f 0.0 %0.4f %0.1f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
+        self._print(fh, "%0.4f %0.4f 0.0 %0.4f %0.4f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
         self._print_array(fh, env['rx_range']/1000)
         self._print(fh, "'"+taskcode+"'")
         self._print(fh, "0")
-        self._print(fh, "%0.1f %0.1f /" % (env['min_angle']*180/_np.pi, env['max_angle']*180/_np.pi))
-        self._print(fh, "0.0 %0.1f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
+        self._print(fh, "%0.4f %0.4f /" % (env['min_angle']*180/_np.pi, env['max_angle']*180/_np.pi))
+        self._print(fh, "0.0 %0.4f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
         _os.close(fh)
         return fname_base
 
@@ -388,7 +387,7 @@ class _Bellhop:
             f.write("'L'\n")
             f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
-                f.write("%0.4f %0.1f\n" % (depth[j,0]/1000, depth[j,1]))
+                f.write("%0.4f %0.4f\n" % (depth[j,0]/1000, depth[j,1]))
 
     def _readf(self, f, types):
         p = _re.split(r' +', f.readline().strip())
@@ -454,3 +453,42 @@ class _Bellhop:
                     'ray': [ray]
                 }))
         return _pd.concat(rays)
+
+    def _load_shd(self, fname_base):
+        with open(fname_base+'.shd', 'rb') as f:
+            recl, = _unpack('i', f.read(4))
+            title = str(f.read(80))
+            f.seek(4*recl, 0)
+            ptype = str(f.read(10)).strip()
+            f.seek(8*recl, 0)
+            nfreq, ntheta, nsx, nsy, nsd, nrd, nrr, atten = _unpack('iiiiiiif', f.read(32))
+            f.seek(12*recl, 0)
+            freqvec = _unpack('d'*nfreq, f.read(8*nfreq))
+            f.seek(16*recl, 0)
+            pos_theta = _unpack('f'*ntheta, f.read(4*ntheta))
+            assert ptype[:2] != 'TL', 'Invalid file format'
+            f.seek(20*recl, 0)
+            pos_s_x = _unpack('f'*nsx, f.read(4*nsx))
+            f.seek(24*recl, 0)
+            pos_s_y = _unpack('f'*nsy, f.read(4*nsy))
+            f.seek(28*recl, 0)
+            pos_s_depth = _unpack('f'*nsd, f.read(4*nsd))
+            f.seek(32*recl, 0)
+            pos_r_depth = _unpack('f'*nrd, f.read(4*nrd))
+            f.seek(36*recl, 0)
+            pos_r_range = _unpack('f'*nrr, f.read(4*nrr))
+            if ptype == 'irregular':
+                pressure = _np.zeros((ntheta, nsd, 1, nrr), dtype=_np.complex)
+                nrcvrs_per_range = 1
+            else:
+                pressure = _np.zeros((ntheta, nsd, nrd, nrr), dtype=_np.complex)
+                nrcvrs_per_range = nrd
+            ifreq = 0
+            for itheta in range(ntheta):
+                for isd in range(nsd):
+                    for ird in range(nrcvrs_per_range):
+                        recnum = 10 + ifreq*ntheta*nsd*nrcvrs_per_range + itheta*nsd*nrcvrs_per_range + isd*nrcvrs_per_range + ird
+                        f.seek(recnum*4*recl, 0)
+                        temp = _np.array(_unpack('f'*2*nrr, f.read(2*nrr*4)))
+                        pressure[itheta,isd,ird,:] = temp[::2] + 1j*temp[1::2]
+        return pressure
