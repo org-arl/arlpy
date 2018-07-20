@@ -25,6 +25,19 @@ from struct import unpack as _unpack
 import arlpy.plot as _plt
 import bokeh as _bokeh
 
+# constants
+linear = 'linear'
+spline = 'spline'
+curvilinear = 'curvilinear'
+coherent = 'coherent'
+incoherent = 'incoherent'
+semicoherent = 'semicoherent'
+
+# models (in order of preference)
+_models = [
+    ('bellhop', _Bellhop)
+]
+
 def create_env2d(**kv):
     """Create a new 2D underwater environment.
 
@@ -61,7 +74,7 @@ def create_env2d(**kv):
         'name': 'arlpy',
         'frequency': 25000,             # Hz
         'soundspeed': 1500,             # m/s
-        'soundspeed_interp': 'spline',  # spline/linear
+        'soundspeed_interp': spline,    # spline/linear
         'bottom_soundspeed': 1600,      # m/s
         'bottom_density': 1600,         # kg/m^3
         'bottom_absorption': 0.1,       # dB/wavelength
@@ -71,7 +84,7 @@ def create_env2d(**kv):
         'rx_depth': 10,                 # m
         'rx_range': 1000,               # m
         'depth': 25,                    # m
-        'depth_interp': 'curvilinear',  # curvilinear/linear
+        'depth_interp': curvilinear,    # curvilinear/linear
         'min_angle': -80,               # deg
         'max_angle': 80                 # deg
     }
@@ -101,7 +114,7 @@ def check_env2d(env):
             assert env['depth'][0,0] == 0, 'First range in depth array must be 0 m'
             assert env['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
             assert _np.all(_np.diff(env['depth'][:,0]) > 0), 'Depth array must be strictly monotonic in range'
-            assert env['depth_interp'] == 'curvilinear' or env['depth_interp'] == 'linear', 'Invalid interpolation type: '+str(env['depth_interp'])
+            assert env['depth_interp'] == curvilinear or env['depth_interp'] == linear, 'Invalid interpolation type: '+str(env['depth_interp'])
             max_depth = _np.max(env['depth'][:,1])
         else:
             max_depth = env['depth']
@@ -111,7 +124,7 @@ def check_env2d(env):
             assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
             assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
             assert _np.all(_np.diff(env['soundspeed'][:,0]) > 0), 'Soundspeed array must be strictly monotonic in depth'
-            assert env['soundspeed_interp'] == 'spline' or env['soundspeed_interp'] == 'linear', 'Invalid interpolation type: '+str(env['soundspeed_interp'])
+            assert env['soundspeed_interp'] == spline or env['soundspeed_interp'] == linear, 'Invalid interpolation type: '+str(env['soundspeed_interp'])
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
@@ -156,7 +169,9 @@ def compute_arrivals(env, model=None, debug=False):
     >>> env = pm.create_env2d()
     >>> arrivals = pm.compute_arrivals(env)
     """
-    model = _select_model(env, 'arrivals', model)
+    (model_name, model) = _select_model(env, 'arrivals', model)
+    if debug:
+        print '[DEBUG] Model: '+model_name
     return model.run(env, 'arrivals', debug)
 
 def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False):
@@ -181,7 +196,9 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
         env['rx_depth'] = env['rx_depth'][rx_depth_ndx]
     if _np.size(env['rx_range']) > 1:
         env['rx_range'] = env['rx_range'][rx_range_ndx]
-    model = _select_model(env, 'eigenrays', model)
+    (model_name, model) = _select_model(env, 'eigenrays', model)
+    if debug:
+        print '[DEBUG] Model: '+model_name
     return model.run(env, 'eigenrays', debug)
 
 def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
@@ -200,29 +217,33 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
-    model = _select_model(env, 'rays', model)
+    (model_name, model) = _select_model(env, 'rays', model)
+    if debug:
+        print '[DEBUG] Model: '+model_name
     return model.run(env, 'rays', debug)
 
-def compute_transmission_loss(env, tx_depth_ndx=0, mode='coherent', model=None, debug=False):
+def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, debug=False):
     """Compute transmission loss from a given transmitter to all receviers.
 
     :param env: environment definition
     :param tx_depth_ndx: transmitter depth index
-    :param mode: 'coherent', 'incoherent' or 'semicoherent'
+    :param mode: coherent, incoherent or semicoherent
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
     :returns: transmission loss in dB at each receiver depth and range
 
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
-    >>> tloss = pm.compute_transmission_loss(env, mode='incoherent')
+    >>> tloss = pm.compute_transmission_loss(env, mode=pm.incoherent)
     """
-    if mode not in ['coherent', 'incoherent', 'semicoherent']:
+    if mode not in [coherent, incoherent, semicoherent]:
         raise ValueError('Unknown transmission loss mode: '+mode)
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
-    model = _select_model(env, mode, model)
+    (model_name, model) = _select_model(env, mode, model)
+    if debug:
+        print '[DEBUG] Model: '+model_name
     return model.run(env, mode, debug)
 
 def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
@@ -292,12 +313,14 @@ def plot_rays(rays, **kwargs):
 
 def _select_model(env, task, model):
     if model is not None:
-        if model == 'bellhop':
-            return _Bellhop()
+        for m in _models:
+            if m[0] == model:
+                return (m[0], m[1]())
         raise ValueError('Unknown model: '+model)
-    for m in [_Bellhop()]:
-        if m.supports(env, task):
-            return m
+    for m in _models:
+        mm = m[1]()
+        if mm.supports(env, task):
+            return (m[0], mm)
     raise ValueError('No suitable propagation model available')
 
 ### Bellhop propagation model ###
@@ -315,9 +338,9 @@ class _Bellhop:
             'arrivals':     ['A', self._load_arrivals],
             'eigenrays':    ['E', self._load_rays],
             'rays':         ['R', self._load_rays],
-            'coherent':     ['C', self._load_shd],
-            'incoherent':   ['I', self._load_shd],
-            'semicoherent': ['S', self._load_shd]
+            coherent:       ['C', self._load_shd],
+            incoherent:     ['I', self._load_shd],
+            semicoherent:   ['S', self._load_shd]
         }
         fname_base = self._create_env_file(env, taskmap[task][0])
         if self._bellhop(fname_base):
@@ -368,7 +391,7 @@ class _Bellhop:
         self._print(fh, "'"+env['name']+"'")
         self._print(fh, "%0.4f" % (env['frequency']))
         self._print(fh, "1")
-        self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == 'spline' else 'C'))
+        self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
         self._print(fh, "1 0.0 %0.4f" % (max_depth))
         svp = env['soundspeed']
@@ -401,7 +424,7 @@ class _Bellhop:
 
     def _create_bty_file(self, filename, depth):
         with open(filename, 'wt') as f:
-            f.write("'%c'\n" % ('C' if env['depth_interp'] == 'curvilinear' else 'L'))
+            f.write("'%c'\n" % ('C' if env['depth_interp'] == curvilinear else 'L'))
             f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
                 f.write("%0.4f %0.4f\n" % (depth[j,0]/1000, depth[j,1]))
