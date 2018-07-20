@@ -22,6 +22,7 @@ import numpy as _np
 import pandas as _pd
 from tempfile import mkstemp as _mkstemp
 from struct import unpack as _unpack
+from sys import float_info as _fi
 import arlpy.plot as _plt
 import bokeh as _bokeh
 
@@ -29,14 +30,15 @@ import bokeh as _bokeh
 linear = 'linear'
 spline = 'spline'
 curvilinear = 'curvilinear'
+arrivals = 'arrivals'
+eigenrays = 'eigenrays'
+rays = 'rays'
 coherent = 'coherent'
 incoherent = 'incoherent'
 semicoherent = 'semicoherent'
 
 # models (in order of preference)
-_models = [
-    ('bellhop', _Bellhop)
-]
+_models = []
 
 def create_env2d(**kv):
     """Create a new 2D underwater environment.
@@ -72,6 +74,7 @@ def create_env2d(**kv):
     """
     env = {
         'name': 'arlpy',
+        'type': '2D',                   # 2D/3D
         'frequency': 25000,             # Hz
         'soundspeed': 1500,             # m/s
         'soundspeed_interp': spline,    # spline/linear
@@ -107,6 +110,7 @@ def check_env2d(env):
     >>> check_env2d(env)
     """
     try:
+        assert env['type'] == '2D', 'Not a 2D environment'
         max_range = _np.max(env['rx_range'])
         if _np.size(env['depth']) > 1:
             assert env['depth'].ndim == 2, 'depth must be a scalar or an Nx2 array'
@@ -169,10 +173,10 @@ def compute_arrivals(env, model=None, debug=False):
     >>> env = pm.create_env2d()
     >>> arrivals = pm.compute_arrivals(env)
     """
-    (model_name, model) = _select_model(env, 'arrivals', model)
+    (model_name, model) = _select_model(env, arrivals, model)
     if debug:
-        print '[DEBUG] Model: '+model_name
-    return model.run(env, 'arrivals', debug)
+        print('[DEBUG] Model: '+model_name)
+    return model.run(env, arrivals, debug)
 
 def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False):
     """Compute eigenrays between a given transmitter and receiver.
@@ -196,10 +200,10 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
         env['rx_depth'] = env['rx_depth'][rx_depth_ndx]
     if _np.size(env['rx_range']) > 1:
         env['rx_range'] = env['rx_range'][rx_range_ndx]
-    (model_name, model) = _select_model(env, 'eigenrays', model)
+    (model_name, model) = _select_model(env, eigenrays, model)
     if debug:
-        print '[DEBUG] Model: '+model_name
-    return model.run(env, 'eigenrays', debug)
+        print('[DEBUG] Model: '+model_name)
+    return model.run(env, eigenrays, debug)
 
 def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     """Compute rays from a given transmitter.
@@ -217,10 +221,10 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
-    (model_name, model) = _select_model(env, 'rays', model)
+    (model_name, model) = _select_model(env, rays, model)
     if debug:
-        print '[DEBUG] Model: '+model_name
-    return model.run(env, 'rays', debug)
+        print('[DEBUG] Model: '+model_name)
+    return model.run(env, rays, debug)
 
 def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, debug=False):
     """Compute transmission loss from a given transmitter to all receviers.
@@ -230,7 +234,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
     :param mode: coherent, incoherent or semicoherent
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
-    :returns: transmission loss in dB at each receiver depth and range
+    :returns: complex transmission loss at each receiver depth and range
 
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
@@ -243,7 +247,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
     (model_name, model) = _select_model(env, mode, model)
     if debug:
-        print '[DEBUG] Model: '+model_name
+        print('[DEBUG] Model: '+model_name)
     return model.run(env, mode, debug)
 
 def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
@@ -311,6 +315,52 @@ def plot_rays(rays, **kwargs):
             c = _bokeh.colors.RGB(c, c, c)
             _plt.plot(row.ray[:,0], -row.ray[:,1], color=c)
 
+def plot_transmission_loss(tloss, clim=None, **kwargs):
+    """Plots transmission loss.
+
+    :param tloss: complex transmission loss
+    :param clim: dynamic range (min, max) or None for automatic selection
+
+    Other keyword arguments applicable for `arlpy.plot.figure()` are also supported.
+
+    >>> import arlpy.uwapm as pm
+    >>> import numpy as np
+    >>> env = pm.create_env2d(
+            rx_depth=np.arange(0, 25),
+            rx_range=np.arange(0, 1000),
+            min_angle=-45,
+            max_angle=45
+        )
+    >>> tloss = pm.compute_transmission_loss(env)
+    >>> ir = pm.plot_transmission_loss(tloss, width=1000)
+    """
+    xr = (min(tloss.columns), max(tloss.columns))
+    yr = (-max(tloss.index), -min(tloss.index))
+    with _plt.figure(xlabel='Range (m)', ylabel='Depth (m)', xlim=xr, ylim=yr, **kwargs):
+        _plt.image(20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss)))), x=xr, y=yr, clim=clim)
+
+def models(env=None, task=None):
+    """List available models.
+
+    :param env: environment to model
+    :param task: arrivals/eigenrays/rays/coherent/incoherent/semicoherent
+    :returns: list of models that can be used
+
+    >>> import arlpy.uwapm as pm
+    >>> pm.models()
+    ['bellhop']
+    >>> env = pm.create_env2d()
+    >>> pm.models(env, task=coherent)
+    ['bellhop']
+    """
+    if (env is None and task is not None) or (env is not None and task is None):
+        raise ValueError('env and task should be both specified together')
+    rv = []
+    for m in _models:
+        if env is None or task is None or m[1]().supports(env, task):
+            rv.append(m[0])
+    return rv
+
 def _select_model(env, task, model):
     if model is not None:
         for m in _models:
@@ -331,16 +381,18 @@ class _Bellhop:
         pass
 
     def supports(self, env, task):
+        if env['type'] != '2D':
+            return False
         return self._bellhop()
 
     def run(self, env, task, debug=False):
         taskmap = {
-            'arrivals':     ['A', self._load_arrivals],
-            'eigenrays':    ['E', self._load_rays],
-            'rays':         ['R', self._load_rays],
-            coherent:       ['C', self._load_shd],
-            incoherent:     ['I', self._load_shd],
-            semicoherent:   ['S', self._load_shd]
+            arrivals:     ['A', self._load_arrivals],
+            eigenrays:    ['E', self._load_rays],
+            rays:         ['R', self._load_rays],
+            coherent:     ['C', self._load_shd],
+            incoherent:   ['I', self._load_shd],
+            semicoherent: ['S', self._load_shd]
         }
         fname_base = self._create_env_file(env, taskmap[task][0])
         if self._bellhop(fname_base):
@@ -523,3 +575,5 @@ class _Bellhop:
                 temp = _np.array(_unpack('f'*2*nrr, f.read(2*nrr*4)))
                 pressure[ird,:] = temp[::2] + 1j*temp[1::2]
         return _pd.DataFrame(pressure, index=pos_r_depth, columns=pos_r_range)
+
+_models.append(('bellhop', _Bellhop))
