@@ -82,6 +82,8 @@ def create_env2d(**kv):
         'bottom_density': 1600,         # kg/m^3
         'bottom_absorption': 0.1,       # dB/wavelength
         'bottom_roughness': 0,          # m (rms)
+        'surface': None,                # surface profile
+        'surface_interp': curvilinear,  # curvilinear/linear
         'tx_depth': 5,                  # m
         'tx_directionality': None,      # [(deg, dB)...]
         'rx_depth': 10,                 # m
@@ -112,6 +114,14 @@ def check_env2d(env):
     try:
         assert env['type'] == '2D', 'Not a 2D environment'
         max_range = _np.max(env['rx_range'])
+        if env['surface'] is not None:
+            assert _np.size(env['surface']) > 1, 'surface must be an Nx2 array'
+            assert env['surface'].ndim == 2, 'surface must be a scalar or an Nx2 array'
+            assert env['surface'].shape[1] == 2, 'surface must be a scalar or an Nx2 array'
+            assert env['surface'][0,0] == 0, 'First range in surface array must be 0 m'
+            assert env['surface'][-1,0] == max_range, 'Last range in surface array must be equal to range: '+str(max_range)+' m'
+            assert _np.all(_np.diff(env['surface'][:,0]) > 0), 'surface array must be strictly monotonic in range'
+            assert env['surface_interp'] == curvilinear or env['surface_interp'] == linear, 'Invalid interpolation type: '+str(env['surface_interp'])
         if _np.size(env['depth']) > 1:
             assert env['depth'].ndim == 2, 'depth must be a scalar or an Nx2 array'
             assert env['depth'].shape[1] == 2, 'depth must be a scalar or an Nx2 array'
@@ -404,6 +414,7 @@ class _Bellhop:
         else:
             self._unlink(fname_base+'.env')
             self._unlink(fname_base+'.bty')
+            self._unlink(fname_base+'.ati')
             self._unlink(fname_base+'.sbp')
             self._unlink(fname_base+'.prt')
             self._unlink(fname_base+'.arr')
@@ -443,7 +454,11 @@ class _Bellhop:
         self._print(fh, "'"+env['name']+"'")
         self._print(fh, "%0.4f" % (env['frequency']))
         self._print(fh, "1")
-        self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
+        if env['surface'] is None:
+            self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
+        else:
+            self._print(fh, "'%cVWT*'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
+            self._create_bty_ati_file(fname_base+'.ati', env['surface'], env['surface_interp'])
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
         self._print(fh, "1 0.0 %0.4f" % (max_depth))
         svp = env['soundspeed']
@@ -458,7 +473,7 @@ class _Bellhop:
             self._print(fh, "'A' %0.4f" % (env['bottom_roughness']))
         else:
             self._print(fh, "'A*' %0.4f" % (env['bottom_roughness']))
-            self._create_bty_file(fname_base+'.bty', depth)
+            self._create_bty_ati_file(fname_base+'.bty', depth, env['depth_interp'])
         self._print(fh, "%0.4f %0.4f 0.0 %0.4f %0.4f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
@@ -474,9 +489,9 @@ class _Bellhop:
         _os.close(fh)
         return fname_base
 
-    def _create_bty_file(self, filename, depth):
+    def _create_bty_ati_file(self, filename, depth, interp):
         with open(filename, 'wt') as f:
-            f.write("'%c'\n" % ('C' if env['depth_interp'] == curvilinear else 'L'))
+            f.write("'%c'\n" % ('C' if interp == curvilinear else 'L'))
             f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
                 f.write("%0.4f %0.4f\n" % (depth[j,0]/1000, depth[j,1]))
