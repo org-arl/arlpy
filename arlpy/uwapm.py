@@ -59,18 +59,21 @@ def create_env2d(**kv):
     """
     env = {
         'name': 'arlpy',
-        'frequency': 25000,           # Hz
-        'soundspeed': 1500,           # m/s
-        'bottom_soundspeed': 1600,    # m/s
-        'bottom_density': 1600,       # kg/m^3
-        'bottom_absorption': 0.1,     # dB/wavelength
-        'bottom_roughness': 0,        # m (rms)
-        'tx_depth': 5,                # m
-        'rx_depth': 10,               # m
-        'rx_range': 1000,             # m
-        'depth': 25,                  # m
-        'min_angle': -0.9*_np.pi/2,   # rad
-        'max_angle': 0.9*_np.pi/2     # rad
+        'frequency': 25000,             # Hz
+        'soundspeed': 1500,             # m/s
+        'soundspeed_interp': 'spline',  # spline/linear
+        'bottom_soundspeed': 1600,      # m/s
+        'bottom_density': 1600,         # kg/m^3
+        'bottom_absorption': 0.1,       # dB/wavelength
+        'bottom_roughness': 0,          # m (rms)
+        'tx_depth': 5,                  # m
+        'tx_directionality': None,      # [(deg, dB)...]
+        'rx_depth': 10,                 # m
+        'rx_range': 1000,               # m
+        'depth': 25,                    # m
+        'depth_interp': 'curvilinear',  # curvilinear/linear
+        'min_angle': -80,               # deg
+        'max_angle': 80                 # deg
     }
     for k, v in kv.items():
         if k not in env.keys():
@@ -93,22 +96,31 @@ def check_env2d(env):
     try:
         max_range = _np.max(env['rx_range'])
         if _np.size(env['depth']) > 1:
-            assert env['depth'].ndim == 2, 'depth must be a scalar or a Nx2 array'
-            assert env['depth'].shape[1] == 2, 'depth must be a scalar or a Nx2 array'
+            assert env['depth'].ndim == 2, 'depth must be a scalar or an Nx2 array'
+            assert env['depth'].shape[1] == 2, 'depth must be a scalar or an Nx2 array'
             assert env['depth'][0,0] == 0, 'First range in depth array must be 0 m'
             assert env['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
+            assert _np.all(_np.diff(env['depth'][:,0]) > 0), 'Depth array must be strictly monotonic in range'
+            assert env['depth_interp'] == 'curvilinear' or env['depth_interp'] == 'linear', 'Invalid interpolation type: '+str(env['depth_interp'])
             max_depth = _np.max(env['depth'][:,1])
         else:
             max_depth = env['depth']
         if _np.size(env['soundspeed']) > 1:
-            assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or a Nx2 array'
-            assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or a Nx2 array'
+            assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or an Nx2 array'
+            assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or an Nx2 array'
             assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
             assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
+            assert _np.all(_np.diff(env['soundspeed'][:,0]) > 0), 'Soundspeed array must be strictly monotonic in depth'
+            assert env['soundspeed_interp'] == 'spline' or env['soundspeed_interp'] == 'linear', 'Invalid interpolation type: '+str(env['soundspeed_interp'])
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
-        assert env['min_angle'] > -_np.pi/2 and env['min_angle'] < _np.pi/2, 'min_angle must be in range (-pi/2, pi/2)'
-        assert env['max_angle'] > -_np.pi/2 and env['max_angle'] < _np.pi/2, 'max_angle must be in range (-pi/2, pi/2)'
+        assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
+        assert env['max_angle'] > -90 and env['max_angle'] < 90, 'max_angle must be in range (-90, 90)'
+        if env['tx_directionality'] is not None:
+            assert _np.size(env['tx_directionality']) > 1, 'tx_directionality must be an Nx2 array'
+            assert env['tx_directionality'].ndim == 2, 'tx_directionality must be an Nx2 array'
+            assert env['tx_directionality'].shape[1] == 2, 'tx_directionality must be an Nx2 array'
+            assert _np.all(env['tx_directionality'][:,0] >= -180) and _np.all(env['tx_directionality'][:,0] <= 180), 'tx_directionality angles must be in [-90, 90]'
     except AssertionError as e:
         raise ValueError(e.args)
 
@@ -317,6 +329,7 @@ class _Bellhop:
         else:
             self._unlink(fname_base+'.env')
             self._unlink(fname_base+'.bty')
+            self._unlink(fname_base+'.sbp')
             self._unlink(fname_base+'.prt')
             self._unlink(fname_base+'.arr')
             self._unlink(fname_base+'.ray')
@@ -355,7 +368,7 @@ class _Bellhop:
         self._print(fh, "'"+env['name']+"'")
         self._print(fh, "%0.4f" % (env['frequency']))
         self._print(fh, "1")
-        self._print(fh, "'CVWT'")
+        self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == 'spline' else 'C'))
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
         self._print(fh, "1 0.0 %0.4f" % (max_depth))
         svp = env['soundspeed']
@@ -375,19 +388,29 @@ class _Bellhop:
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
         self._print_array(fh, env['rx_range']/1000)
-        self._print(fh, "'"+taskcode+"'")
+        if env['tx_directionality'] is None:
+            self._print(fh, "'"+taskcode+"'")
+        else:
+            self._print(fh, "'"+taskcode+" *'")
+            self._create_sbp_file(fname_base+'.sbp', env['tx_directionality'])
         self._print(fh, "0")
-        self._print(fh, "%0.4f %0.4f /" % (env['min_angle']*180/_np.pi, env['max_angle']*180/_np.pi))
+        self._print(fh, "%0.4f %0.4f /" % (env['min_angle'], env['max_angle']))
         self._print(fh, "0.0 %0.4f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
         _os.close(fh)
         return fname_base
 
     def _create_bty_file(self, filename, depth):
         with open(filename, 'wt') as f:
-            f.write("'L'\n")
+            f.write("'%c'\n" % ('C' if env['depth_interp'] == 'curvilinear' else 'L'))
             f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
                 f.write("%0.4f %0.4f\n" % (depth[j,0]/1000, depth[j,1]))
+
+    def _create_sbp_file(self, filename, dir):
+        with open(filename, 'wt') as f:
+            f.write(str(dir.shape[0])+"\n")
+            for j in range(dir.shape[0]):
+                f.write("%0.4f %0.4f\n" % (dir[j,0], dir[j,1]))
 
     def _readf(self, f, types):
         p = _re.split(r' +', f.readline().strip())
@@ -420,8 +443,8 @@ class _Bellhop:
                                 'arrival_number': [n],
                                 'arrival_amplitude': [data[0]*_np.exp(1j*data[1])],
                                 'time_of_arrival': [data[2]],
-                                'angle_of_departure': [data[4]*_np.pi/180],
-                                'angle_of_arrival': [data[5]*_np.pi/180],
+                                'angle_of_departure': [data[4]],
+                                'angle_of_arrival': [data[5]],
                                 'surface_bounces': [data[6]],
                                 'bottom_bounces': [data[7]]
                             }, index=[len(arrivals)+1]))
@@ -447,7 +470,7 @@ class _Bellhop:
                 for k in range(pts):
                     ray[k,:] = self._readf(f, (float, float))
                 rays.append(_pd.DataFrame({
-                    'angle_of_departure': [a*_np.pi/180],
+                    'angle_of_departure': [a],
                     'surface_bounces': [sb],
                     'bottom_bounces': [bb],
                     'ray': [ray]
@@ -459,36 +482,21 @@ class _Bellhop:
             recl, = _unpack('i', f.read(4))
             title = str(f.read(80))
             f.seek(4*recl, 0)
-            ptype = str(f.read(10)).strip()
+            ptype = f.read(10).decode('utf8').strip()
+            assert ptype == 'rectilin', 'Invalid file format (expecting ptype == "rectilin")'
             f.seek(8*recl, 0)
             nfreq, ntheta, nsx, nsy, nsd, nrd, nrr, atten = _unpack('iiiiiiif', f.read(32))
-            f.seek(12*recl, 0)
-            freqvec = _unpack('d'*nfreq, f.read(8*nfreq))
-            f.seek(16*recl, 0)
-            pos_theta = _unpack('f'*ntheta, f.read(4*ntheta))
-            assert ptype[:2] != 'TL', 'Invalid file format'
-            f.seek(20*recl, 0)
-            pos_s_x = _unpack('f'*nsx, f.read(4*nsx))
-            f.seek(24*recl, 0)
-            pos_s_y = _unpack('f'*nsy, f.read(4*nsy))
-            f.seek(28*recl, 0)
-            pos_s_depth = _unpack('f'*nsd, f.read(4*nsd))
+            assert nfreq == 1, 'Invalid file format (expecting nfreq == 1)'
+            assert ntheta == 1, 'Invalid file format (expecting ntheta == 1)'
+            assert nsd == 1, 'Invalid file format (expecting nsd == 1)'
             f.seek(32*recl, 0)
             pos_r_depth = _unpack('f'*nrd, f.read(4*nrd))
             f.seek(36*recl, 0)
             pos_r_range = _unpack('f'*nrr, f.read(4*nrr))
-            if ptype == 'irregular':
-                pressure = _np.zeros((ntheta, nsd, 1, nrr), dtype=_np.complex)
-                nrcvrs_per_range = 1
-            else:
-                pressure = _np.zeros((ntheta, nsd, nrd, nrr), dtype=_np.complex)
-                nrcvrs_per_range = nrd
-            ifreq = 0
-            for itheta in range(ntheta):
-                for isd in range(nsd):
-                    for ird in range(nrcvrs_per_range):
-                        recnum = 10 + ifreq*ntheta*nsd*nrcvrs_per_range + itheta*nsd*nrcvrs_per_range + isd*nrcvrs_per_range + ird
-                        f.seek(recnum*4*recl, 0)
-                        temp = _np.array(_unpack('f'*2*nrr, f.read(2*nrr*4)))
-                        pressure[itheta,isd,ird,:] = temp[::2] + 1j*temp[1::2]
-        return pressure
+            pressure = _np.zeros((nrd, nrr), dtype=_np.complex)
+            for ird in range(nrd):
+                recnum = 10 + ird
+                f.seek(recnum*4*recl, 0)
+                temp = _np.array(_unpack('f'*2*nrr, f.read(2*nrr*4)))
+                pressure[ird,:] = temp[::2] + 1j*temp[1::2]
+        return _pd.DataFrame(pressure, index=pos_r_depth, columns=pos_r_range)
