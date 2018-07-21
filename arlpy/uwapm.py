@@ -218,26 +218,14 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
     oh = _plt.hold()
     if env['surface'] is None:
         _plt.plot([min_x, max_x], [0, 0], xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
-    #### commented out because Bellhop's curvilinear fit doesn't seem to do this
-    #elif env['surface_interp'] == curvilinear:
-    #    s = env['surface']
-    #    f = _interp.lagrange(s[:,0]/divisor, s[:,1])
-    #    xnew = _np.linspace(min_x, max_x, 1000)
-    #    _plt.plot(xnew, -f(xnew), xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
-    #    _plt.plot(s[:,0]/divisor, -s[:,1], marker='.', style=None, color=surface_color)
     else:
+        # linear and curvilinear options use the same altimetry, just with different normals
         s = env['surface']
         _plt.plot(s[:,0]/divisor, -s[:,1], xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
     if _np.size(env['depth']) == 1:
         _plt.plot([min_x, max_x], [env['depth'], env['depth']], color=bottom_color)
-    #### commented out because Bellhop's curvilinear fit doesn't seem to do this
-    #elif env['depth_interp'] == curvilinear:
-    #    s = env['depth']
-    #    f = _interp.lagrange(s[:,0]/divisor, s[:,1])
-    #    xnew = _np.linspace(min_x, max_x, 1000)
-    #    _plt.plot(xnew, -f(xnew), color=bottom_color)
-    #    _plt.plot(s[:,0]/divisor, -s[:,1], marker='.', style=None, color=bottom_color)
     else:
+        # linear and curvilinear options use the same bathymetry, just with different normals
         s = env['depth']
         _plt.plot(s[:,0]/divisor, -s[:,1], color=bottom_color)
     txd = env['tx_depth']
