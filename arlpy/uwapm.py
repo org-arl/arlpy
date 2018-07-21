@@ -173,7 +173,7 @@ def print_env(env):
         else:
             print('%20s : '%(k) + v)
 
-def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='orangered', rx_color='midnightblue', **kwargs):
+def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='orangered', rx_color='midnightblue', rx_plot=None, **kwargs):
     """Plots a visual representation of the environment.
 
     :param env: environment description
@@ -181,8 +181,13 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
     :param bottom_color: color of the bottom (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param tx_color: color of transmitters (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
     :param rx_color: color of receviers (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param rx_plot: True to plot all receivers, False to not plot any receivers, None to automatically decide
 
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
+
+    The surface, bottom, transmitters (marker: *) and receivers (marker: o)
+    are plotted in the environment. If `rx_plot` is set to None and there are
+    more than 2000 receivers, they are not plotted.
 
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d(depth=[
@@ -230,7 +235,9 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
         _plt.plot(s[:,0]/divisor, -s[:,1], color=bottom_color)
     txd = env['tx_depth']
     _plt.plot([0]*_np.size(txd), -txd, marker='*', style=None, color=tx_color)
-    if _np.size(env['rx_depth'])*_np.size(env['rx_range']) < 2000:
+    if rx_plot is None:
+        rx_plot = _np.size(env['rx_depth'])*_np.size(env['rx_range']) < 2000
+    if rx_plot:
         rxr = env['rx_range']
         if _np.size(rxr) == 1:
             rxr = [rxr]
@@ -414,10 +421,14 @@ def plot_arrivals(arrivals, **kwargs):
         _plt.plot([t, t], [0, _np.abs(row.arrival_amplitude)], xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs)
     _plt.hold(oh)
 
-def plot_rays(rays, **kwargs):
+def plot_rays(rays, env=None, **kwargs):
     """Plots ray paths.
 
     :param rays: ray paths
+    :param env: environment definition
+
+    If environment definition is provided, it is overlayed over this plot using default
+    parameters for `arlpy.uwapm.plot_env()`.
 
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
@@ -441,12 +452,18 @@ def plot_rays(rays, **kwargs):
         c = int(255*_np.abs(row.bottom_bounces)/max_amp)
         c = _bokeh.colors.RGB(c, c, c)
         _plt.plot(row.ray[:,0]/divisor, -row.ray[:,1], color=c, xlabel=xlabel, ylabel='Depth (m)', **kwargs)
+    if env is not None:
+        plot_env(env)
     _plt.hold(oh)
 
-def plot_transmission_loss(tloss, **kwargs):
+def plot_transmission_loss(tloss, env=None, **kwargs):
     """Plots transmission loss.
 
     :param tloss: complex transmission loss
+    :param env: environment definition
+
+    If environment definition is provided, it is overlayed over this plot using default
+    parameters for `arlpy.uwapm.plot_env()`.
 
     Other keyword arguments applicable for `arlpy.plot.image()` are also supported.
 
@@ -467,7 +484,11 @@ def plot_transmission_loss(tloss, **kwargs):
     if xr[1]-xr[0] > 10000:
         xr = (min(tloss.columns)/1000, max(tloss.columns)/1000)
         xlabel = 'Range (km)'
+    oh = _plt.hold()
     _plt.image(20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss)))), x=xr, y=yr, xlabel=xlabel, ylabel='Depth (m)', xlim=xr, ylim=yr, **kwargs)
+    if env is not None:
+        plot_env(env, rx_plot=False)
+    _plt.hold(oh)
 
 def models(env=None, task=None):
     """List available models.
