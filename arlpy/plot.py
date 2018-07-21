@@ -118,23 +118,34 @@ def _show(f):
 
 def _hold_enable(enable):
     global _hold, _figure
+    ohold = _hold
     _hold = enable
     if not _hold and _figure is not None:
         _show(_figure)
         _figure = None
+    return ohold
 
 def figsize(x, y):
-    """Set the default figure size in pixels."""
+    """Set the default figure size in pixels.
+
+    :param x: figure width
+    :param y: figure height
+    """
     global _figsize
     _figsize = (x, y)
 
 def interactive(b):
-    """Set default interactivity for plots."""
+    """Set default interactivity for plots.
+
+    :param b: True to enable interactivity, False to disable it
+    """
     global _interactive
     _interactive = b
 
 def enable_javascript(b):
     """Enable/disable Javascript.
+
+    :param b: True to use Javacript, False to avoid use of Javascript
 
     Jupyterlab does not support Javascript output. To avoid error messages,
     Javascript can be disabled using this call. This removes an optimization
@@ -146,6 +157,8 @@ def enable_javascript(b):
 
 def use_static_images(b=True):
     """Use static images instead of dynamic HTML/Javascript in Jupyter notebook.
+
+    :param b: True to use static images, False to use HTML/Javascript
 
     Static images are useful when the notebook is to be exported as a markdown,
     LaTeX or PDF document, since dynamic HTML/Javascript is not rendered in these
@@ -164,16 +177,20 @@ def use_static_images(b=True):
     _interactive = False
     _static_images = True
 
-def hold(enable):
+def hold(enable=True):
     """Combine multiple plots into one.
 
+    :param enable: True to hold plot, False to release hold
+    :returns: old state of hold if enable is True
+
     >>> import arlpy.plot
-    >>> arlpy.plot.hold(True)
+    >>> oh = arlpy.plot.hold()
     >>> arlpy.plot.plot([0,10], [0,10], color='blue', legend='A')
     >>> arlpy.plot.plot([10,0], [0,10], marker='o', color='green', legend='B')
-    >>> arlpy.plot.hold(False)
+    >>> arlpy.plot.hold(oh)
     """
-    _hold_enable(enable)
+    rv = _hold_enable(enable)
+    return rv if enable else None
 
 class figure:
     """Create a new figure, and optionally automatically display it.
@@ -273,7 +290,10 @@ def next_column():
         _figures[-1].append(None)
 
 def gcf():
-    """Get the current figure."""
+    """Get the current figure.
+
+    :returns: handle to the current figure
+    """
     return _figure
 
 def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
