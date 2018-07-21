@@ -19,6 +19,7 @@ import os as _os
 import re as _re
 import subprocess as _proc
 import numpy as _np
+from scipy import interpolate as _interp
 import pandas as _pd
 from tempfile import mkstemp as _mkstemp
 from struct import unpack as _unpack
@@ -83,13 +84,13 @@ def create_env2d(**kv):
         'bottom_absorption': 0.1,       # dB/wavelength
         'bottom_roughness': 0,          # m (rms)
         'surface': None,                # surface profile
-        'surface_interp': curvilinear,  # curvilinear/linear
+        'surface_interp': linear,       # curvilinear/linear
         'tx_depth': 5,                  # m
         'tx_directionality': None,      # [(deg, dB)...]
         'rx_depth': 10,                 # m
         'rx_range': 1000,               # m
         'depth': 25,                    # m
-        'depth_interp': curvilinear,    # curvilinear/linear
+        'depth_interp': linear,         # curvilinear/linear
         'min_angle': -80,               # deg
         'max_angle': 80                 # deg
     }
@@ -160,6 +161,7 @@ def print_env(env):
     >>> env = pm.create_env2d(depth=40, soundspeed=1540)
     >>> pm.print_env(env)
     """
+    check_env2d(env)
     keys = ['name'] + sorted(list(env.keys()-['name']))
     for k in keys:
         v = str(env[k])
@@ -170,6 +172,116 @@ def print_env(env):
                 print('%20s   '%('') + v1)
         else:
             print('%20s : '%(k) + v)
+
+def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='orangered', rx_color='midnightblue', **kwargs):
+    """Plots a visual representation of the environment.
+
+    :param env: environment description
+    :param surface_color: color of the surface (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param bottom_color: color of the bottom (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param tx_color: color of transmitters (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+    :param rx_color: color of receviers (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
+
+    Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d(depth=[
+            [0, 40],
+            [100, 30],
+            [500, 35],
+            [700, 20],
+            [1000,45]
+        ])
+    >>> pm.plot_env(env)
+    """
+    check_env2d(env)
+    min_x = 0
+    max_x = _np.max(env['rx_range'])
+    if max_x-min_x > 10000:
+        divisor = 1000
+        min_x /= divisor
+        max_x /= divisor
+        xlabel = 'Range (km)'
+    else:
+        divisor = 1
+        xlabel = 'Range (m)'
+    if env['surface'] is None:
+        min_y = 0
+    else:
+        min_y = _np.min(env['surface'][:,1])
+    if _np.size(env['depth']) > 1:
+        max_y = _np.max(env['depth'][:,1])
+    else:
+        max_y = env['depth']
+    mgn_x = 0.01*(max_x-min_x)
+    mgn_y = 0.1*(max_y-min_y)
+    oh = _plt.hold()
+    if env['surface'] is None:
+        _plt.plot([min_x, max_x], [0, 0], xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
+    #### commented out because Bellhop's curvilinear fit doesn't seem to do this
+    #elif env['surface_interp'] == curvilinear:
+    #    s = env['surface']
+    #    f = _interp.lagrange(s[:,0]/divisor, s[:,1])
+    #    xnew = _np.linspace(min_x, max_x, 1000)
+    #    _plt.plot(xnew, -f(xnew), xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
+    #    _plt.plot(s[:,0]/divisor, -s[:,1], marker='.', style=None, color=surface_color)
+    else:
+        s = env['surface']
+        _plt.plot(s[:,0]/divisor, -s[:,1], xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
+    if _np.size(env['depth']) == 1:
+        _plt.plot([min_x, max_x], [env['depth'], env['depth']], color=bottom_color)
+    #### commented out because Bellhop's curvilinear fit doesn't seem to do this
+    #elif env['depth_interp'] == curvilinear:
+    #    s = env['depth']
+    #    f = _interp.lagrange(s[:,0]/divisor, s[:,1])
+    #    xnew = _np.linspace(min_x, max_x, 1000)
+    #    _plt.plot(xnew, -f(xnew), color=bottom_color)
+    #    _plt.plot(s[:,0]/divisor, -s[:,1], marker='.', style=None, color=bottom_color)
+    else:
+        s = env['depth']
+        _plt.plot(s[:,0]/divisor, -s[:,1], color=bottom_color)
+    txd = env['tx_depth']
+    _plt.plot([0]*_np.size(txd), -txd, marker='*', style=None, color=tx_color)
+    if _np.size(env['rx_depth'])*_np.size(env['rx_range']) < 2000:
+        rxr = env['rx_range']
+        if _np.size(rxr) == 1:
+            rxr = [rxr]
+        for r in _np.array(rxr):
+            rxd = env['rx_depth']
+            _plt.plot([r/divisor]*_np.size(rxd), -rxd, marker='o', style=None, color=rx_color)
+    _plt.hold(oh)
+
+def plot_ssp(env, **kwargs):
+    """Plots the sound speed profile.
+
+    :param env: environment description
+
+    Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
+
+    >>> import arlpy.uwapm as pm
+    >>> env = pm.create_env2d(soundspeed=[
+            [0, 1540],
+            [10, 1520],
+            [25, 1530],
+        ])
+    >>> pm.plot_ssp(env)
+    """
+    check_env2d(env)
+    if _np.size(env['soundspeed']) == 1:
+        if _np.size(env['depth']) > 1:
+            max_y = _np.max(env['depth'][:,1])
+        else:
+            max_y = env['depth']
+        _plt.plot([env['soundspeed'], env['soundspeed']], [0, -max_y], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
+    elif env['soundspeed_interp'] == spline:
+        s = env['soundspeed']
+        tck = _interp.splrep(s[:,0], s[:,1], s=0)
+        ynew = _np.linspace(_np.min(s[:,0]), _np.max(s[:,0]), 100)
+        _plt.plot(_interp.splev(ynew, tck, der=0), -ynew, xlabel='Soundspeed (m/s)', ylabel='Depth (m)', hold=True, **kwargs)
+        _plt.plot(s[:,1], -s[:,0], marker='.', style=None, **kwargs)
+    else:
+        s = env['soundspeed']
+        _plt.plot(s[:,1], -s[:,0], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
 
 def compute_arrivals(env, model=None, debug=False):
     """Compute arrivals between each transmitter and receiver.
@@ -182,7 +294,9 @@ def compute_arrivals(env, model=None, debug=False):
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> arrivals = pm.compute_arrivals(env)
+    >>> pm.plot_arrivals(arrivals)
     """
+    check_env2d(env)
     (model_name, model) = _select_model(env, arrivals, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
@@ -202,7 +316,9 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> rays = pm.compute_eigenrays(env)
+    >>> pm.plot_rays(rays, width=1000)
     """
+    check_env2d(env)
     env = env.copy()
     if _np.size(env['tx_depth']) > 1:
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
@@ -227,7 +343,9 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> rays = pm.compute_rays(env)
+    >>> pm.plot_rays(rays, width=1000)
     """
+    check_env2d(env)
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
@@ -249,7 +367,9 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> tloss = pm.compute_transmission_loss(env, mode=pm.incoherent)
+    >>> pm.plot_transmission_loss(tloss, width=1000)
     """
+    check_env2d(env)
     if mode not in [coherent, incoherent, semicoherent]:
         raise ValueError('Unknown transmission loss mode: '+mode)
     if _np.size(env['tx_depth']) > 1:
@@ -284,54 +404,63 @@ def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
         ir[ndx] = row.arrival_amplitude
     return ir
 
-def plot_arrivals(arrivals, color='blue', **kwargs):
+def plot_arrivals(arrivals, **kwargs):
     """Plots the arrival times and amplitudes.
 
     :param arrivals: arrivals times (s) and coefficients
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
 
-    Other keyword arguments applicable for `arlpy.plot.figure()` are also supported.
+    Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> arrivals = pm.compute_arrivals(env)
-    >>> ir = pm.plot_arrivals(arrivals, color='red', width=800)
+    >>> pm.plot_arrivals(arrivals)
     """
     t0 = min(arrivals.time_of_arrival)
     t1 = max(arrivals.time_of_arrival)
-    with _plt.figure(xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs):
-        _plt.plot([t0, t1], [0, 0], color=color)
-        for _, row in arrivals.iterrows():
-            t = row.time_of_arrival.real
-            _plt.plot([t, t], [0, _np.abs(row.arrival_amplitude)], color=color)
+    oh = _plt.hold()
+    _plt.plot([t0, t1], [0, 0], xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs)
+    for _, row in arrivals.iterrows():
+        t = row.time_of_arrival.real
+        _plt.plot([t, t], [0, _np.abs(row.arrival_amplitude)], xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs)
+    _plt.hold(oh)
 
 def plot_rays(rays, **kwargs):
     """Plots ray paths.
 
     :param rays: ray paths
 
-    Other keyword arguments applicable for `arlpy.plot.figure()` are also supported.
+    Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d()
     >>> rays = pm.compute_eigenrays(env)
-    >>> ir = pm.plot_rays(rays, width=1000)
+    >>> pm.plot_rays(rays, width=1000)
     """
     rays = rays.sort_values('bottom_bounces', ascending=False)
     max_amp = _np.max(_np.abs(rays.bottom_bounces))
-    with _plt.figure(xlabel='Range (m)', ylabel='Depth (m)', **kwargs):
-        for _, row in rays.iterrows():
-            c = int(255*_np.abs(row.bottom_bounces)/max_amp)
-            c = _bokeh.colors.RGB(c, c, c)
-            _plt.plot(row.ray[:,0], -row.ray[:,1], color=c)
+    divisor = 1
+    xlabel = 'Range (m)'
+    r = []
+    for _, row in rays.iterrows():
+        r += list(row.ray[:,0])
+    if max(r)-min(r) > 10000:
+        divisor = 1000
+        xlabel = 'Range (km)'
+    oh = _plt.hold()
+    for _, row in rays.iterrows():
+        c = int(255*_np.abs(row.bottom_bounces)/max_amp)
+        c = _bokeh.colors.RGB(c, c, c)
+        _plt.plot(row.ray[:,0]/divisor, -row.ray[:,1], color=c, xlabel=xlabel, ylabel='Depth (m)', **kwargs)
+    _plt.hold(oh)
 
-def plot_transmission_loss(tloss, clim=None, **kwargs):
+def plot_transmission_loss(tloss, **kwargs):
     """Plots transmission loss.
 
     :param tloss: complex transmission loss
-    :param clim: dynamic range (min, max) or None for automatic selection
 
-    Other keyword arguments applicable for `arlpy.plot.figure()` are also supported.
+    Other keyword arguments applicable for `arlpy.plot.image()` are also supported.
 
     >>> import arlpy.uwapm as pm
     >>> import numpy as np
@@ -342,12 +471,15 @@ def plot_transmission_loss(tloss, clim=None, **kwargs):
             max_angle=45
         )
     >>> tloss = pm.compute_transmission_loss(env)
-    >>> ir = pm.plot_transmission_loss(tloss, width=1000)
+    >>> pm.plot_transmission_loss(tloss, width=1000)
     """
     xr = (min(tloss.columns), max(tloss.columns))
     yr = (-max(tloss.index), -min(tloss.index))
-    with _plt.figure(xlabel='Range (m)', ylabel='Depth (m)', xlim=xr, ylim=yr, **kwargs):
-        _plt.image(20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss)))), x=xr, y=yr, clim=clim)
+    xlabel = 'Range (m)'
+    if xr[1]-xr[0] > 10000:
+        xr = (min(tloss.columns)/1000, max(tloss.columns)/1000)
+        xlabel = 'Range (km)'
+    _plt.image(20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss)))), x=xr, y=yr, xlabel=xlabel, ylabel='Depth (m)', xlim=xr, ylim=yr, **kwargs)
 
 def models(env=None, task=None):
     """List available models.
@@ -363,6 +495,8 @@ def models(env=None, task=None):
     >>> pm.models(env, task=coherent)
     ['bellhop']
     """
+    if env is not None:
+        check_env2d(env)
     if (env is None and task is not None) or (env is not None and task is None):
         raise ValueError('env and task should be both specified together')
     rv = []
