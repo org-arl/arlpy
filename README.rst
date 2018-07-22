@@ -19,6 +19,7 @@ and developers working on signal processing, communication and underwater acoust
     * Communications (`arlpy.comms`)
     * Geographical coordinates (`arlpy.geo`)
     * Underwater acoustics (`arlpy.uwa`)
+    * Underwater acoustic propagation modeling (`arlpy.uwapm`)
     * Plotting utilities (`arlpy.plot`)
     * Common utilities (`arlpy.utils`)
 
