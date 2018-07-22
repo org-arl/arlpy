@@ -119,15 +119,15 @@ def check_env2d(env):
             assert _np.size(env['surface']) > 1, 'surface must be an Nx2 array'
             assert env['surface'].ndim == 2, 'surface must be a scalar or an Nx2 array'
             assert env['surface'].shape[1] == 2, 'surface must be a scalar or an Nx2 array'
-            assert env['surface'][0,0] == 0, 'First range in surface array must be 0 m'
-            assert env['surface'][-1,0] == max_range, 'Last range in surface array must be equal to range: '+str(max_range)+' m'
+            assert env['surface'][0,0] <= 0, 'First range in surface array must be 0 m'
+            assert env['surface'][-1,0] >= max_range, 'Last range in surface array must be beyond maximum range: '+str(max_range)+' m'
             assert _np.all(_np.diff(env['surface'][:,0]) > 0), 'surface array must be strictly monotonic in range'
             assert env['surface_interp'] == curvilinear or env['surface_interp'] == linear, 'Invalid interpolation type: '+str(env['surface_interp'])
         if _np.size(env['depth']) > 1:
             assert env['depth'].ndim == 2, 'depth must be a scalar or an Nx2 array'
             assert env['depth'].shape[1] == 2, 'depth must be a scalar or an Nx2 array'
-            assert env['depth'][0,0] == 0, 'First range in depth array must be 0 m'
-            assert env['depth'][-1,0] == max_range, 'Last range in depth array must be equal to range: '+str(max_range)+' m'
+            assert env['depth'][0,0] <= 0, 'First range in depth array must be 0 m'
+            assert env['depth'][-1,0] >= max_range, 'Last range in depth array must be beyond maximum range: '+str(max_range)+' m'
             assert _np.all(_np.diff(env['depth'][:,0]) > 0), 'Depth array must be strictly monotonic in range'
             assert env['depth_interp'] == curvilinear or env['depth_interp'] == linear, 'Invalid interpolation type: '+str(env['depth_interp'])
             max_depth = _np.max(env['depth'][:,1])
@@ -136,8 +136,9 @@ def check_env2d(env):
         if _np.size(env['soundspeed']) > 1:
             assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or an Nx2 array'
             assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or an Nx2 array'
-            assert env['soundspeed'][0,0] == 0, 'First depth in soundspeed array must be 0 m'
-            assert env['soundspeed'][-1,0] == max_depth, 'Last depth in soundspeed array must be equal to water depth: '+str(max_depth)+' m'
+            assert env['soundspeed'].shape[0] > 3, 'soundspeed profile must have at least 4 points'
+            assert env['soundspeed'][0,0] <= 0, 'First depth in soundspeed array must be 0 m'
+            assert env['soundspeed'][-1,0] >= max_depth, 'Last depth in soundspeed array must be beyond water depth: '+str(max_depth)+' m'
             assert _np.all(_np.diff(env['soundspeed'][:,0]) > 0), 'Soundspeed array must be strictly monotonic in depth'
             assert env['soundspeed_interp'] == spline or env['soundspeed_interp'] == linear, 'Invalid interpolation type: '+str(env['soundspeed_interp'])
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
@@ -190,13 +191,7 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
     more than 2000 receivers, they are not plotted.
 
     >>> import arlpy.uwapm as pm
-    >>> env = pm.create_env2d(depth=[
-            [0, 40],
-            [100, 30],
-            [500, 35],
-            [700, 20],
-            [1000,45]
-        ])
+    >>> env = pm.create_env2d(depth=[[0, 40], [100, 30], [500, 35], [700, 20], [1000,45]])
     >>> pm.plot_env(env)
     """
     check_env2d(env)
@@ -228,7 +223,7 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
         s = env['surface']
         _plt.plot(s[:,0]/divisor, -s[:,1], xlabel=xlabel, ylabel='Depth (m)', xlim=(min_x-mgn_x, max_x+mgn_x), ylim=(-max_y-mgn_y, -min_y+mgn_y), color=surface_color, **kwargs)
     if _np.size(env['depth']) == 1:
-        _plt.plot([min_x, max_x], [env['depth'], env['depth']], color=bottom_color)
+        _plt.plot([min_x, max_x], [-env['depth'], -env['depth']], color=bottom_color)
     else:
         # linear and curvilinear options use the same bathymetry, just with different normals
         s = env['depth']
@@ -254,11 +249,7 @@ def plot_ssp(env, **kwargs):
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
     >>> import arlpy.uwapm as pm
-    >>> env = pm.create_env2d(soundspeed=[
-            [0, 1540],
-            [10, 1520],
-            [25, 1530],
-        ])
+    >>> env = pm.create_env2d(soundspeed=[[ 0, 1540], [10, 1530], [20, 1532], [25, 1533], [30, 1535]])
     >>> pm.plot_ssp(env)
     """
     check_env2d(env)
@@ -270,9 +261,10 @@ def plot_ssp(env, **kwargs):
         _plt.plot([env['soundspeed'], env['soundspeed']], [0, -max_y], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
     elif env['soundspeed_interp'] == spline:
         s = env['soundspeed']
-        tck = _interp.splrep(s[:,0], s[:,1], s=0)
         ynew = _np.linspace(_np.min(s[:,0]), _np.max(s[:,0]), 100)
-        _plt.plot(_interp.splev(ynew, tck, der=0), -ynew, xlabel='Soundspeed (m/s)', ylabel='Depth (m)', hold=True, **kwargs)
+        tck = _interp.splrep(s[:,0], s[:,1], s=0)
+        xnew = _interp.splev(ynew, tck, der=0)
+        _plt.plot(xnew, -ynew, xlabel='Soundspeed (m/s)', ylabel='Depth (m)', hold=True, **kwargs)
         _plt.plot(s[:,1], -s[:,0], marker='.', style=None, **kwargs)
     else:
         s = env['soundspeed']
@@ -399,10 +391,11 @@ def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
         ir[ndx] = row.arrival_amplitude
     return ir
 
-def plot_arrivals(arrivals, **kwargs):
+def plot_arrivals(arrivals, dB=False, color='blue', **kwargs):
     """Plots the arrival times and amplitudes.
 
     :param arrivals: arrivals times (s) and coefficients
+    :param dB: True to plot in dB, False for linear scale
     :param color: line color (see `Bokeh colors <https://bokeh.pydata.org/en/latest/docs/reference/colors.html>`_)
 
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
@@ -415,10 +408,19 @@ def plot_arrivals(arrivals, **kwargs):
     t0 = min(arrivals.time_of_arrival)
     t1 = max(arrivals.time_of_arrival)
     oh = _plt.hold()
-    _plt.plot([t0, t1], [0, 0], xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs)
+    if dB:
+        min_y = 20*_np.log10(_np.max(_np.abs(arrivals.arrival_amplitude)))-60
+        ylabel = 'Amplitude (dB)'
+    else:
+        ylabel = 'Amplitude'
+        _plt.plot([t0, t1], [0, 0], xlabel='Arrival time (s)', ylabel=ylabel, color=color, **kwargs)
+        min_y = 0
     for _, row in arrivals.iterrows():
         t = row.time_of_arrival.real
-        _plt.plot([t, t], [0, _np.abs(row.arrival_amplitude)], xlabel='Arrival time (s)', ylabel='Amplitude', **kwargs)
+        y = _np.abs(row.arrival_amplitude)
+        if dB:
+            y = max(20*_np.log10(_fi.epsilon+y), min_y)
+        _plt.plot([t, t], [min_y, y], xlabel='Arrival time (s)', ylabel=ylabel, ylim=[min_y, min_y+70], color=color, **kwargs)
     _plt.hold(oh)
 
 def plot_rays(rays, env=None, **kwargs):
