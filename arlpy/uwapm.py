@@ -8,11 +8,15 @@
 #
 ##############################################################################
 
-"""Underwater acoustics propagation modeling toolbox.
+"""Underwater acoustic propagation modeling toolbox.
 
 This toolbox currently uses the Bellhop acoustic propagation model. For this model
 to work, the `acoustic toolbox <http://oalib.hlsresearch.com/Modes/AcousticsToolbox/>`_
 must be installed on your computer and `bellhop.exe` should be in your PATH.
+
+.. sidebar:: Sample Jupyter notebook
+
+    For usage examples of this toolbox, see `Bellhop notebook <_static/bellhop.html>`_.
 """
 
 import os as _os
@@ -186,7 +190,7 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
 
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
-    The surface, bottom, transmitters (marker: *) and receivers (marker: o)
+    The surface, bottom, transmitters (marker: '*') and receivers (marker: 'o')
     are plotted in the environment. If `rx_plot` is set to None and there are
     more than 2000 receivers, they are not plotted.
 

@@ -1,5 +1,5 @@
-Underwater acoustics propagation modeling
-=========================================
+Underwater acoustic propagation modeling
+========================================
 
 .. automodule:: arlpy.uwapm
     :members:
