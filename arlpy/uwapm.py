@@ -516,7 +516,7 @@ def models(env=None, task=None):
         raise ValueError('env and task should be both specified together')
     rv = []
     for m in _models:
-        if env is None or task is None or m[1]().supports(env, task):
+        if m[1]().supports(env, task):
             rv.append(m[0])
     return rv
 
@@ -539,10 +539,17 @@ class _Bellhop:
     def __init__(self):
         pass
 
-    def supports(self, env, task):
-        if env['type'] != '2D':
+    def supports(self, env=None, task=None):
+        if env is not None and env['type'] != '2D':
             return False
-        return self._bellhop()
+        fh, fname = _mkstemp(suffix='.env')
+        _os.close(fh)
+        fname_base = fname[:-4]
+        rv = self._bellhop(fname_base)
+        self._unlink(fname_base+'.env')
+        self._unlink(fname_base+'.prt')
+        self._unlink(fname_base+'.log')
+        return rv
 
     def run(self, env, task, debug=False):
         taskmap = {
@@ -566,6 +573,7 @@ class _Bellhop:
             self._unlink(fname_base+'.ati')
             self._unlink(fname_base+'.sbp')
             self._unlink(fname_base+'.prt')
+            self._unlink(fname_base+'.log')
             self._unlink(fname_base+'.arr')
             self._unlink(fname_base+'.ray')
             self._unlink(fname_base+'.shd')
@@ -573,7 +581,7 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            _proc.check_output(['bellhop.exe'] + list(args), stderr=_proc.STDOUT)
+            _proc.call(['bellhop.exe'] + list(args), stderr=_proc.STDOUT)
         except OSError:
             return False
         return True
