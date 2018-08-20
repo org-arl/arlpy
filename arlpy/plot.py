@@ -612,7 +612,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     >>> import numpy as np
     >>> arlpy.plot.specgram(np.random.normal(size=(10000)), fs=10000, clim=30)
     """
-    f, t, Sxx = _sig.spectrogram(x, fs=fs, nfft=nfft, noverlap=noverlap)
+    f, t, Sxx = _sig.spectrogram(x, fs=fs, nperseg=nfft, noverlap=noverlap)
     Sxx = 10*_np.log10(Sxx)
     if isinstance(clim, float) or isinstance(clim, int):
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
