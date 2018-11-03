@@ -613,7 +613,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     >>> arlpy.plot.specgram(np.random.normal(size=(10000)), fs=10000, clim=30)
     """
     f, t, Sxx = _sig.spectrogram(x, fs=fs, nperseg=nfft, noverlap=noverlap)
-    Sxx = 10*_np.log10(Sxx)
+    Sxx = 10*_np.log10(Sxx+_np.finfo(float).eps)
     if isinstance(clim, float) or isinstance(clim, int):
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
     image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
@@ -647,7 +647,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
     >>> arlpy.plot.psd(np.random.normal(size=(10000)), fs=10000)
     """
     f, Pxx = _sig.welch(x, fs=fs, nperseg=nfft, noverlap=noverlap, window=window)
-    Pxx = 10*_np.log10(Pxx)
+    Pxx = 10*_np.log10(Pxx+_np.finfo(float).eps)
     if xlim is None:
         xlim = (0, fs/2)
     if ylim is None:
