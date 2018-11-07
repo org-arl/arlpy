@@ -94,3 +94,72 @@ def get_signal(signals, n, order='F'):
                         _warn('Unknown ordering: '+order+', assuming F')
                     x = _np.reshape(x, (ch, x.size//ch), order='F')
             return x
+
+def read_signals(filename, callback, filter=None, order='F'):
+    """Read a signals file and call callback for each signal.
+
+    The callback function is called for each signal with a dictionary containing
+    header information and the extracted signal.
+
+    If a filter function is specified, it is called for each signal header.
+    The function should return True if the signal should be extracted, False
+    otherwise.
+
+    :param filename: name of signals file with RxBasebandSignalNtfs
+    :param callback: callback to call with each signal
+    :param filter: callback to decide if a signal is extracted, or None
+    :param order: ordering for multi-channel signals ('C' or 'F', see numpy.reshape())
+
+    >>> import arlpy.unet
+    >>> arlpy.unet.read_signals('signals-0.txt', lambda hdr, x: print(hdr, x.shape))
+    >>> arlpy.unet.read_signals('signals-0.txt', lambda hdr, x: print(hdr, x.shape), lambda hdr: hdr['fc']==0)
+    """
+    p = _re.compile(r'(\d+)\|RxBasebandSignalNtf:INFORM .* \((\d+) (baseband )?samples\)')
+    lno = 0
+    accept = False
+    for s in open(filename, 'r'):
+        lno += 1
+        m = p.match(s)
+        if m:
+            t = int(m.group(1))
+            m1 = _re.search(r' rxTime:(\d+) ', s)
+            rxtime = int(m1.group(1)) if m1 else t
+            m1 = _re.search(r' adc:(\d+) ', s)
+            adc = int(m1.group(1)) if m1 else 1
+            m1 = _re.search(r' channels:(\d+) ', s)
+            ch = int(m1.group(1)) if m1 else 1
+            m1 = _re.search(r' fc:(\d+) ', s)
+            fc = int(m1.group(1)) if m1 else 0
+            m1 = _re.search(r' fs:(\d+) ', s)
+            fs = int(m1.group(1)) if m1 else 0
+            m1 = _re.search(r' baseband samples', s)
+            bb = True if m1 else False
+            m1 = _re.search(r' preamble:(\d+) ', s)
+            preamble = int(m1.group(1)) if m1 else 0
+            m1 = _re.search(r' rssi:(\-?\d+\.?\d*) ', s)
+            rssi = float(m1.group(1)) if m1 else _np.nan
+            hdr = { 'time': t, 'rxtime': rxtime, 'adc': adc, 'channels': ch, 'fc': fc, 'fs': fs,
+                    'baseband': bb, 'len': int(m.group(2)), 'preamble': preamble, 'rssi': rssi,
+                    'filename': filename, 'lno': lno }
+            if filter:
+                accept = filter(hdr)
+            else:
+                accept = True
+        elif accept:
+            accept = False
+            x = _b64.standard_b64decode(s)
+            if bb:
+                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex)
+                x = x[0::2] + 1j*x[1::2]
+            else:
+                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float)
+            if x.size != hdr['len']*ch:
+                _warn('Incorrect signal length: '+filename+':'+lno)
+            if ch > 1:
+                if order == 'C':
+                    x = _np.reshape(x, (x.size//ch, ch), order='C')
+                else:
+                    if order != 'F':
+                        _warn('Unknown ordering: '+order+', assuming F')
+                    x = _np.reshape(x, (ch, x.size//ch), order='F')
+            callback(hdr, x)
