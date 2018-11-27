@@ -56,6 +56,10 @@ class GeoTestSuite(MyTestCase):
         p2 = [400.0, 600.0, -5.0]
         self.assertEqual(geo.distance(p1, p1), 0.0)
         self.assertEqual(geo.distance(p1, p2), 500.0)
+        self.assertEqual(list(map(round, geo.pos([1, 103, 20], origin=(1, 103)))), [0, 0, 20])
+        org = (1, 103)
+        y = geo.latlong(geo.pos(x, origin=org), origin=org)
+        self.assertEqual(tuple(np.round(y, 5)), x)
 
 class UwaTestSuite(MyTestCase):
 
