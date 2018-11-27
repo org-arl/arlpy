@@ -147,19 +147,22 @@ def read_signals(filename, callback, filter=None, order='F'):
                 accept = True
         elif accept:
             accept = False
-            x = _b64.standard_b64decode(s)
-            if bb:
-                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex)
-                x = x[0::2] + 1j*x[1::2]
-            else:
-                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float)
-            if x.size != hdr['len']*ch:
-                _warn('Incorrect signal length: '+filename+':'+lno)
-            if ch > 1:
-                if order == 'C':
-                    x = _np.reshape(x, (x.size//ch, ch), order='C')
+            try:
+                x = _b64.standard_b64decode(s)
+                if bb:
+                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex)
+                    x = x[0::2] + 1j*x[1::2]
                 else:
-                    if order != 'F':
-                        _warn('Unknown ordering: '+order+', assuming F')
-                    x = _np.reshape(x, (ch, x.size//ch), order='F')
-            callback(hdr, x)
+                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float)
+                if x.size != hdr['len']*ch:
+                    _warn('Incorrect signal length: '+filename+':'+str(lno))
+                if ch > 1:
+                    if order == 'C':
+                        x = _np.reshape(x, (x.size//ch, ch), order='C')
+                    else:
+                        if order != 'F':
+                            _warn('Unknown ordering: '+order+', assuming F')
+                        x = _np.reshape(x, (ch, x.size//ch), order='F')
+                callback(hdr, x)
+            except Exception as ex:
+                _warn('Bad signal: '+filename+':'+str(lno)+': '+str(ex))
