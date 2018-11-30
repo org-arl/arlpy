@@ -67,14 +67,18 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.soundspeed(27, 35, 10), 1539)
 
     def test_absorption(self):
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -9)
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -31)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(10000, temperature=15)), -1)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -11)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -36)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=0)), -40)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=2000)), -30)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=6000)), -16)
 
     def test_absorption_filter(self):
         b = uwa.absorption_filter(200000)
         w, h = sp.freqz(b, 1, 4)
         h = utils.mag2db(np.abs(h))
-        self.assertEqual(list(np.round(h)), [0.0, -2.0, -9.0, -19.0])
+        self.assertEqual(list(np.round(h)), [0.0, -3.0, -11.0, -22.0])
 
     def test_density(self):
         self.assertApproxEqual(uwa.density(27, 35), 1023)
@@ -87,6 +91,21 @@ class UwaTestSuite(MyTestCase):
         self.assertEqual(uwa.doppler(0, 50000), 50000)
         self.assertApproxEqual(uwa.doppler(10, 50000), 50325)
         self.assertApproxEqual(uwa.doppler(-10, 50000), 49675)
+
+    def test_bubble_resonance(self):
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32500)
+        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101562)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45962)
+
+    def test_bubble_surface_loss(self):
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(3, 10000, 0)), -1.44, precision=2)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(6, 10000, 0)), -53)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 10000, 0.785)), -166)
+
+    def test_bubble_soundspeed(self):
+        self.assertApproxEqual(uwa.bubble_soundspeed(0, 1500), 1500)
+        self.assertApproxEqual(uwa.bubble_soundspeed(1e-5, 1500), 1372)
+        self.assertApproxEqual(uwa.bubble_soundspeed(1, 1500, 330), 330)
 
 class SignalTestSuite(MyTestCase):
 
