@@ -680,7 +680,8 @@ def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, t
     >>> arlpy.plot.iqplot(arlpy.comms.psk(4), labels=['00', '01', '11', '10'])
     """
     data = _np.asarray(data, dtype=_np.complex)
-    figure(title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
+    if not _hold:
+        figure(title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
     if labels is None:
         if size is None:
             size = 5
