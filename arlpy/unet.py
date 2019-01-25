@@ -23,7 +23,7 @@ def get_signals(filename):
     :param filename: name of signals file with RxBasebandSignalNtfs
     :returns: table of signals
     """
-    p = _re.compile(r'(\d+)\|RxBasebandSignalNtf:INFORM .* \((\d+) (baseband )?samples\)')
+    p = _re.compile(r'(\d+)\|RxBasebandSignalNtf:INFORM.* \((\d+) (baseband )?samples\).*')
     data = []
     lno = 0
     for s in open(filename, 'r'):
