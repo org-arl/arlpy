@@ -42,7 +42,7 @@ try:
 except:
     pass                            # not in Jupyter, skip notebook initialization
 
-def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive):
+def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive):
     global _color
     if width is None:
         width = _figsize[0]
@@ -54,7 +54,7 @@ def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive):
         interactive = _interactive
     if interactive:
         tools = 'pan,box_zoom,wheel_zoom,reset,save'
-    f = _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel, tools=tools)
+    f = _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel, x_axis_type=xtype, y_axis_type=ytype, tools=tools)
     f.toolbar.logo = None
     return f
 
@@ -200,6 +200,8 @@ class figure:
     :param ylabel: y-axis label
     :param xlim: x-axis limits (min, max)
     :param ylim: y-axis limits (min, max)
+    :param xtype: x-axis type ('auto', 'linear', 'log', etc)
+    :param ytype: y-axis type ('auto', 'linear', 'log', etc)
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
@@ -225,9 +227,9 @@ class figure:
     >>>     f.square([3,7], [4,5], line_color='green', fill_color='yellow', size=10)
     """
 
-    def __init__(self, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, interactive=None):
+    def __init__(self, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, xtype='auto', ytype='auto', width=None, height=None, interactive=None):
         global _figure
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
 
     def __enter__(self):
         global _hold
@@ -296,7 +298,7 @@ def gcf():
     """
     return _figure
 
-def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
+def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='solid', thickness=1, marker=None, filled=False, size=6, mskip=0, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, xtype='auto', ytype='auto', width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot a line graph or time series.
 
     :param x: x data or time series data (if y is None)
@@ -316,6 +318,8 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
     :param ylabel: y-axis label
     :param xlim: x-axis limits (min, max)
     :param ylim: y-axis limits (min, max)
+    :param xtype: x-axis type ('auto', 'linear', 'log', etc)
+    :param ytype: y-axis type ('auto', 'linear', 'log', etc)
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param legend: legend text
@@ -341,7 +345,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
     else:
         y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
     if color is None:
         color = _colors[_color % len(_colors)]
         _color += 1
@@ -375,7 +379,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
         _show(_figure)
         _figure = None
 
-def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
+def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, xtype='auto', ytype='auto', width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot a scatter plot.
 
     :param x: x data
@@ -389,6 +393,8 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     :param ylabel: y-axis label
     :param xlim: x-axis limits (min, max)
     :param ylim: y-axis limits (min, max)
+    :param xtype: x-axis type ('auto', 'linear', 'log', etc)
+    :param ytype: y-axis type ('auto', 'linear', 'log', etc)
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param legend: legend text
@@ -401,7 +407,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     """
     global _figure, _color
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
     x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
     y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
     if color is None:
@@ -429,7 +435,7 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
         _show(_figure)
         _figure = None
 
-def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
+def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, xtype='auto', ytype='auto', width=None, height=None, hold=False, interactive=None):
     """Plot a heatmap of 2D scalar data.
 
     :param img: 2D image data
@@ -443,6 +449,8 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     :param ylabel: y-axis label
     :param xlim: x-axis limits (min, max)
     :param ylim: y-axis limits (min, max)
+    :param xtype: x-axis type ('auto', 'linear', 'log', etc)
+    :param ytype: y-axis type ('auto', 'linear', 'log', etc)
     :param width: figure width in pixels
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
@@ -462,7 +470,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
     if ylim is None:
         ylim = y
     if _figure is None:
-        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, interactive)
+        _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
     if clim is None:
         clim = [_np.amin(img), _np.amax(img)]
     if isinstance(colormap, str):
