@@ -473,7 +473,7 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
     if clim is None:
         clim = [_np.amin(img), _np.amax(img)]
-    if isinstance(colormap, str):
+    if not isinstance(colormap, _bmodels.ColorMapper):
         colormap = _bmodels.LinearColorMapper(palette=colormap, low=clim[0], high=clim[1])
     _figure.image([img], x=x[0], y=y[0], dw=x[-1]-x[0], dh=y[-1]-y[0], color_mapper=colormap)
     cbar = _bmodels.ColorBar(color_mapper=colormap, location=(0,0), title=clabel)
