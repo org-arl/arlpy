@@ -618,7 +618,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
     image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
-def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
+def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot power spectral density of a given time series signal.
 
     :param x: time series signal
@@ -652,7 +652,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
         xlim = (0, fs/2)
     if ylim is None:
         ylim = (_np.max(Pxx)-50, _np.max(Pxx)+10)
-    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
+    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive, legend=legend)
 
 def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, title=None, xlabel=None, ylabel=None, xlim=[-2, 2], ylim=[-2, 2], width=None, height=None, hold=False, interactive=None):
     """Plot signal points.
