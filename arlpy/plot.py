@@ -368,12 +368,13 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
             y = y[::n]
         _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text=desc, text_font_size="8pt", text_alpha=0.5))
     if style is not None:
-        _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend=legend)
+        p = _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend=legend)
     if marker is not None:
-        scatter(x[::(mskip+1)], y[::(mskip+1)], marker=marker, filled=filled, size=size, color=color, legend=legend, hold=True)
+        p = scatter(x[::(mskip+1)], y[::(mskip+1)], marker=marker, filled=filled, size=size, color=color, legend=legend, hold=True)
     if not hold and not _hold:
         _show(_figure)
         _figure = None
+    return p
 
 def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot a scatter plot.
@@ -408,26 +409,27 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
         color = _colors[_color % len(_colors)]
         _color += 1
     if marker == '.':
-        _figure.circle(x, y, size=size/2, line_color=color, fill_color=color, legend=legend)
+        p = _figure.circle(x, y, size=size/2, line_color=color, fill_color=color, legend=legend)
     elif marker == 'o':
-        _figure.circle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.circle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == 's':
-        _figure.square(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.square(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == '*':
-        _figure.asterisk(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.asterisk(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == 'x':
-        _figure.x(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.x(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == '+':
-        _figure.cross(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.cross(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == 'd':
-        _figure.diamond(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.diamond(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker == '^':
-        _figure.triangle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        p = _figure.triangle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
     elif marker is not None:
         _warnings.warn('Bad marker type: '+marker)
     if not hold and not _hold:
         _show(_figure)
         _figure = None
+    return p
 
 def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, title=None, xlabel=None, ylabel=None, xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
     """Plot a heatmap of 2D scalar data.
@@ -467,12 +469,13 @@ def image(img, x=None, y=None, colormap='Plasma256', clim=None, clabel=None, tit
         clim = [_np.amin(img), _np.amax(img)]
     if isinstance(colormap, str):
         colormap = _bmodels.LinearColorMapper(palette=colormap, low=clim[0], high=clim[1])
-    _figure.image([img], x=x[0], y=y[0], dw=x[-1]-x[0], dh=y[-1]-y[0], color_mapper=colormap)
+    p = _figure.image([img], x=x[0], y=y[0], dw=x[-1]-x[0], dh=y[-1]-y[0], color_mapper=colormap)
     cbar = _bmodels.ColorBar(color_mapper=colormap, location=(0,0), title=clabel)
     _figure.add_layout(cbar, 'right')
     if not hold and not _hold:
         _show(_figure)
         _figure = None
+    return p
 
 def vlines(x, color='gray', style='dashed', thickness=1, hold=False):
     """Draw vertical lines on a plot.
@@ -607,6 +610,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+    :return: returns a handle to the plot
 
     >>> import arlpy.plot
     >>> import numpy as np
@@ -616,7 +620,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
     Sxx = 10*_np.log10(Sxx)
     if isinstance(clim, float) or isinstance(clim, int):
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
-    image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
+    return image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
 def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot power spectral density of a given time series signal.
@@ -641,6 +645,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+    :return: returns a handle to the plot
 
     >>> import arlpy.plot
     >>> import numpy as np
@@ -652,7 +657,7 @@ def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='s
         xlim = (0, fs/2)
     if ylim is None:
         ylim = (_np.max(Pxx)-50, _np.max(Pxx)+10)
-    plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive, legend=legend)
+    return plot(f, Pxx, color=color, style=style, thickness=thickness, marker=marker, filled=filled, size=size, title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive, legend=legend)
 
 def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, title=None, xlabel=None, ylabel=None, xlim=[-2, 2], ylim=[-2, 2], width=None, height=None, hold=False, interactive=None):
     """Plot signal points.
@@ -672,6 +677,7 @@ def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, t
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+    :return: returns a handle to the plot
 
     >>> import arlpy
     >>> import arlpy.plot
@@ -684,15 +690,17 @@ def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, t
     if labels is None:
         if size is None:
             size = 5
-        scatter(data.real, data.imag, marker=marker, filled=filled, color=color, size=size, hold=hold)
+        p = scatter(data.real, data.imag, marker=marker, filled=filled, color=color, size=size, hold=hold)
     else:
         if labels == True:
             labels = range(len(data))
         if color is None:
             color = 'black'
-        plot([0], [0], hold=True)
+        p = plot([0], [0], hold=True)
         for i in range(len(data)):
             text(data[i].real, data[i].imag, str(labels[i]), color=color, size=size, hold=True if i < len(data)-1 else hold)
+
+    return p
 
 def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', thickness=1, title=None, xlabel='Frequency (Hz)', xlim=None, ylim=None, width=None, height=None, hold=False, interactive=None):
     """Plot frequency response of a filter.
@@ -719,6 +727,7 @@ def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', t
     :param height: figure height in pixels
     :param interactive: enable interactive tools (pan, zoom, etc) for plot
     :param hold: if set to True, output is not plotted immediately, but combined with the next plot
+    :return: returns a tuple of handles to both the amplitude and phase plot
 
     >>> import arlpy
     >>> arlpy.plot.freqz([1,1,1,1,1], fs=120000);
@@ -732,11 +741,12 @@ def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', t
         ylim = (_np.max(Hxx)-50, _np.max(Hxx)+10)
     figure(title=title, xlabel=xlabel, ylabel='Amplitude (dB)', xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
     _hold_enable(True)
-    plot(f, Hxx, color=color(0), style=style, thickness=thickness, legend='Magnitude')
+    a = plot(f, Hxx, color=color(0), style=style, thickness=thickness, legend='Magnitude')
     fig = gcf()
     units = 180/_np.pi if degrees else 1
     fig.extra_y_ranges = {'phase': _bmodels.Range1d(start=-_np.pi*units, end=_np.pi*units)}
     fig.add_layout(_bmodels.LinearAxis(y_range_name='phase', axis_label='Phase (degrees)' if degrees else 'Phase (radians)'), 'right')
     phase = _np.angle(h)*units
-    fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend='Phase', y_range_name='phase')
+    p = fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend='Phase', y_range_name='phase')
     _hold_enable(hold)
+    return (a,p)
