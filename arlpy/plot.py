@@ -68,7 +68,7 @@ def _process_canvas(figures):
     i = 0
     for f in figures:
         i += 1
-        if f.tools == []:
+        if f is not None and f.tools == []:
             disable.append(i)
         else:
             pass
