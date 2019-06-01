@@ -21,6 +21,10 @@ import bokeh.resources as _bres
 import bokeh.io as _bio
 import scipy.signal as _sig
 
+light_palette = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
+                 'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
+dark_palette = ['lightskyblue', 'red', 'limegreen', 'salmon', 'magenta', 'forestgreen', 'silver', 'teal']
+
 _figure = None
 _figures = None
 _hold = False
@@ -31,8 +35,7 @@ _disable_js = False
 _using_js = False
 _interactive = True
 _static_images = False
-_colors = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
-           'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
+_colors = light_palette
 
 try:
     get_ipython                     # check if we are using IPython
@@ -124,6 +127,22 @@ def _hold_enable(enable):
         _show(_figure)
         _figure = None
     return ohold
+
+def theme(name):
+    """Set color theme.
+
+    :param name: name of theme
+
+    >>> import arlpy.plot
+    >>> arlpy.plot.theme('dark')
+    """
+    if name == 'dark':
+        name = 'dark_minimal'
+        set_colors(dark_palette)
+    elif name == 'light':
+        name = 'light_minimal'
+        set_colors(light_palette)
+    _bio.curdoc().theme = name
 
 def figsize(x, y):
     """Set the default figure size in pixels.
