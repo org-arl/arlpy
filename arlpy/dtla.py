@@ -60,8 +60,8 @@ def get_data(filename, channel=None, start=0, length=None, detrend='linear'):
         length = get_data_length(filename)-start
     with open(filename, 'rb') as f:
         f.seek(start*_framelen, _os.SEEK_SET)
-        data = _np.fromfile(f, dtype=_np.uint16, count=_framelen/2*length)
-    data = _np.reshape(data, [length,_framelen/2])
+        data = _np.fromfile(f, dtype=_np.uint16, count=_framelen//2*length)
+    data = _np.reshape(data, [length,_framelen//2])
     data = data[:,2:]
     data = _np.take(data, channel, axis=1).astype(_np.float)
     if len(channel) == 1:
