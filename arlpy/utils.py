@@ -10,8 +10,21 @@
 
 """Common utility functions."""
 
-import numpy as _np
+import os as _os
 import sys as _sys
+import uuid as _uuid
+import numpy as _np
+
+_notebook = False
+
+try:
+    get_ipython                     # check if we are using IPython
+    _os.environ['JPY_PARENT_PID']   # and Jupyter
+    import IPython.display as _ipyd
+    _ipyd.ProgressBar               # and IPython >= 6.2.1
+    _notebook = True
+except:
+    pass                            # not in Jupyter, skip notebook initialization
 
 def mag2db(x):
     """Convert magnitude quantity to dB."""
@@ -79,26 +92,63 @@ def linspace3d(start0, stop0, num0, start1, stop1, num1, start2, stop2, num2):
     z = _np.linspace(start2, stop2, num2, dtype=_np.float)
     return _np.array(_np.meshgrid(x, y, z)).T.reshape(-1, 3)
 
+def rotation_matrix(alpha, beta, gamma):
+    """Generates a 3D rotation matrix.
+
+    :param alpha: rotation angle around x-axis
+    :param beta: rotation angle around y-axis
+    :param gamma: rotation angle around z-axis
+
+    Rotation is applied around x, y and z axis in that order.
+    """
+    R = _eye(3)
+    if alpha != 0:
+        R = _dot(_array([[1.,          0.,           0.],
+                         [0., _cos(alpha), -_sin(alpha)],
+                         [0., _sin(alpha),  _cos(alpha)]]), R)
+    if beta != 0:
+        R = _dot(_array([[ _cos(beta), 0., _sin(beta)],
+                         [ 0.,         1.,         0.],
+                         [-_sin(beta), 0., _cos(beta)]]), R)
+
+    if gamma != 0:
+        R = _dot(_array([[_cos(gamma), -_sin(gamma), 0.],
+                         [_sin(gamma),  _cos(gamma), 0.],
+                         [         0.,           0., 1.]]), R)
+    return R
+
 def progress(n, width=50):
     """Display progress bar for long running operations.
 
     :param n: total number of steps to completion
-    :param width: width of the progress bar
+    :param width: width of the progress bar (only for the text version)
 
     >>> import arlpy
     >>> progress = arlpy.utils.progress(100)
     >>> for j in range(100):
             next(progress)
     """
-    _sys.stdout.write('%s|\n' % ('-'*width))
-    _sys.stdout.flush()
-    c = 0
-    for j in xrange(n):
-        c1 = width*(j+1)/n
-        if c1 > c:
-            _sys.stdout.write('>'*(c1-c))
-            c = c1
-            if c == width:
-                _sys.stdout.write('\n')
-            _sys.stdout.flush()
-        yield j
+    if _notebook:
+        import IPython.display as _ipyd
+        p = _ipyd.ProgressBar(total=n)
+        did = str(_uuid.uuid4())
+        _ipyd.display(p, display_id=did)
+        for j in range(1, n):
+            p.progress = j
+            _ipyd.update_display(p, display_id=did)
+            yield j
+        _ipyd.update_display(_ipyd.HTML(''), display_id=did)
+        yield None
+    else:
+        _sys.stdout.write('%s|\n' % ('-'*width))
+        _sys.stdout.flush()
+        c = 0
+        for j in range(n):
+            c1 = int(width*(j+1)/n)
+            if c1 > c:
+                _sys.stdout.write('>'*(c1-c))
+                c = c1
+                if c == width:
+                    _sys.stdout.write('\n')
+                _sys.stdout.flush()
+            yield j

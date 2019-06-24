@@ -23,7 +23,7 @@ class MyTestCase(unittest.TestCase):
         if precision is None:
             np.testing.assert_array_equal(a, b, err_msg=msg)
         else:
-            np.testing.assert_allclose(a, b, rtol=0, atol=np.power(10.0, -precision), err_msg=msg)
+            np.testing.assert_almost_equal(a, b, decimal=precision, err_msg=msg)
 
 class UtilsTestSuite(MyTestCase):
 
@@ -46,7 +46,7 @@ class UtilsTestSuite(MyTestCase):
 class GeoTestSuite(MyTestCase):
 
     def test_pos(self):
-        self.assertEqual(map(round, geo.pos([1, 103, 20])), [277438, 110598, 20])
+        self.assertEqual(list(map(round, geo.pos([1, 103, 20]))), [277438, 110598, 20])
         self.assertEqual(geo.zone([1, 103]), (48, 'N'))
         self.assertEqual(geo.zone([1, 103, 20]), (48, 'N'))
         x = (1.25, 103.5, 10.0)
@@ -62,6 +62,10 @@ class GeoTestSuite(MyTestCase):
         p2 = [400.0, 600.0, -5.0]
         self.assertEqual(geo.distance(p1, p1), 0.0)
         self.assertEqual(geo.distance(p1, p2), 500.0)
+        self.assertEqual(list(map(round, geo.pos([1, 103, 20], origin=(1, 103)))), [0, 0, 20])
+        org = (1, 103)
+        y = geo.latlong(geo.pos(x, origin=org), origin=org)
+        self.assertEqual(tuple(np.round(y, 5)), x)
 
 class UwaTestSuite(MyTestCase):
 
@@ -69,14 +73,18 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.soundspeed(27, 35, 10), 1539)
 
     def test_absorption(self):
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -8)
-        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -28)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(10000, temperature=15)), -1)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(50000)), -11)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000)), -36)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=0)), -40)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=2000)), -30)
+        self.assertApproxEqual(utils.mag2db(uwa.absorption(100000, temperature=14, salinity=38.5, depth=6000)), -16)
 
     def test_absorption_filter(self):
         b = uwa.absorption_filter(200000)
         w, h = sp.freqz(b, 1, 4)
-        h = 20*np.log10(np.abs(h))
-        self.assertEqual(list(np.round(h)), [0.0, -2.0, -8.0, -17.0])
+        h = utils.mag2db(np.abs(h))
+        self.assertEqual(list(np.round(h)), [0.0, -3.0, -11.0, -22.0])
 
     def test_density(self):
         self.assertApproxEqual(uwa.density(27, 35), 1023)
@@ -90,6 +98,21 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.doppler(10, 50000), 50325)
         self.assertApproxEqual(uwa.doppler(-10, 50000), 49675)
 
+    def test_bubble_resonance(self):
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32500)
+        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101562)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45962)
+
+    def test_bubble_surface_loss(self):
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(3, 10000, 0)), -1.44, precision=2)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(6, 10000, 0)), -53)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 10000, 0.785)), -166)
+
+    def test_bubble_soundspeed(self):
+        self.assertApproxEqual(uwa.bubble_soundspeed(0, 1500), 1500)
+        self.assertApproxEqual(uwa.bubble_soundspeed(1e-5, 1500), 1372)
+        self.assertApproxEqual(uwa.bubble_soundspeed(1, 1500, 330), 330)
+
 class SignalTestSuite(MyTestCase):
 
     def test_time(self):
@@ -98,6 +121,7 @@ class SignalTestSuite(MyTestCase):
 
     def test_cw(self):
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, complex_output=True), np.exp(2j*np.pi*10000*np.arange(5000, dtype=np.complex)/50000), precision=6)
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
 
     def test_sweep(self):
@@ -123,15 +147,11 @@ class SignalTestSuite(MyTestCase):
         # we only test until 16, as longer sequences are too slow!
         for j in range(2, 17):
             x = signal.gmseq(j)
-            self.assertArrayEqual(np.abs(x), np.ones(len(x)))
+            self.assertArrayEqual(np.abs(x), np.ones(len(x)), precision=6)
             x_fft = np.fft.fft(x)
             y = np.abs(np.fft.ifft(x_fft*x_fft.conj()))
             self.assertApproxEqual(y[0], len(x), precision=6)
             self.assertArrayEqual(y[1:], 0, 'gmseq(%d)'%(j), precision=6)
-
-    def test_freqz(self):
-        # no regression test, since this is a graphics utility function
-        pass
 
     def test_bb2pb2bb(self):
         x = signal.bb2pb(np.ones(1024), 18000, 27000, 108000)
@@ -170,9 +190,9 @@ class SignalTestSuite(MyTestCase):
 
     def test_nco(self):
         nco = signal.nco_gen(27000, 108000, func=np.sin)
-        x = [nco.next() for i in range(12)]
+        x = [nco.__next__() for i in range(12)]
         x = np.append(x, nco.send(54000))
-        x = np.append(x, [nco.next() for i in range(4)])
+        x = np.append(x, [nco.__next__() for i in range(4)])
         self.assertArrayEqual(x, [0, 1, 0, -1, 0, 1, 0, -1, 0, 1, 0, -1, 1, -1, 1, -1, 1], precision=6)
         fc = np.append([27000]*12, [54000]*5)
         x = signal.nco(fc, 108000, func=np.sin)
@@ -186,6 +206,22 @@ class SignalTestSuite(MyTestCase):
         self.assertArrayEqual(y, z, precision=6)
         y = signal.correlate_periodic(x, x)
         self.assertArrayEqual(y, z)
+
+    def test_goertzel(self):
+        x1 = signal.cw(64, 1, 512)
+        x2 = signal.cw(32, 1, 512)
+        g1 = signal.goertzel(64, x1, 512)
+        g2 = signal.goertzel(64, x2, 512)
+        self.assertApproxEqual(g1, 512/2)
+        self.assertApproxEqual(g2, 0)
+        g1 = signal.goertzel(32, x1, 512)
+        g2 = signal.goertzel(32, x2, 512)
+        self.assertApproxEqual(g1, 0)
+        self.assertApproxEqual(g2, 512/2)
+        x2 = np.append(x2, [0])
+        g2 = signal.goertzel(32, x2, 512, True)
+        self.assertEqual(g2.size, 513)
+        self.assertApproxEqual(np.abs(g2[-1]), 512/2)
 
 class CommsTestSuite(MyTestCase):
 
@@ -257,10 +293,6 @@ class CommsTestSuite(MyTestCase):
         x = comms.fsk(4, 8)
         self.assertEqual(x.shape, (4, 8))
 
-    def test_iqplot(self):
-        # no regression test, since this is a graphics utility function
-        pass
-
     def test_modulation(self):
         x = comms.random_data(1000)
         y = comms.modulate(x, comms.psk())
@@ -328,16 +360,26 @@ class CommsTestSuite(MyTestCase):
                                                             -0.0321,  0.1189,  0.3109,  0.4716,  0.5342,  0.4716,  0.3109,  0.1189, -0.0321,
                                                             -0.0994, -0.0852, -0.0275,  0.0265,  0.0471,  0.0327,  0.0030, -0.0188, -0.0213,
                                                             -0.0091,  0.0050,  0.0106,  0.0064, -0.0015, -0.0057, -0.0038,  0.0014,  0.0046], precision=4)
-    def test_updown_conversion(self):
+
+    def test_updown_rrc_conversion(self):
         x = comms.upconvert(np.ones(1024), 6, fc=27000, fs=108000)
         self.assertArrayEqual(x[108:-108], np.sqrt(2./6)*np.cos(2*np.pi*27000*signal.time(x,108000))[108:-108], precision=3)
         x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
         rrcp = comms.rrcosfir(0.25, 6)
         y = comms.upconvert(x,  6, fc=0.5, g=rrcp)
         z = comms.downconvert(y, 6, fc=0.5, g=rrcp)
-        delay = (len(z)-len(x))/2
+        delay = int((len(z)-len(x))/2)
         d = z[delay:-delay]-x
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -40)
+        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
+        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
+
+    def test_updown_rect_conversion(self):
+        x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
+        y = comms.upconvert(x,  16, fc=0.5)
+        z = comms.downconvert(y, 16, fc=0.5)
+        d = z-x
+        self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -10)
         self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
         self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
 

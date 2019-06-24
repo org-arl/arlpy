@@ -17,6 +17,14 @@ docs:
 install:
 	python setup.py install
 
+testupload:
+	python setup.py sdist
+	twine upload --repository pypitest dist/*
+
+upload:
+	python setup.py sdist
+	twine upload --repository pypi dist/*
+
 clean:
 	find . -name *.pyc -exec rm {} \;
 	rm -rf build arlpy.egg-info dist

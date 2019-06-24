@@ -6,6 +6,8 @@ scientists and engineers using Python. However, these packages are still young
 and evolving, and understandably have some gaps, especially when it comes to
 domain-specific requirements. The `arlpy` package aims to fill in some of the
 gaps in the areas of underwater acoustics, signal processing, and communication.
+Additionally, `arlpy` also includes some commonly needed utilities and plotting
+routines based on `bokeh`.
 
 General modules
 ---------------
@@ -20,6 +22,8 @@ and developers working on signal processing, communication and underwater acoust
    comms
    geo
    uwa
+   uwapm
+   plot
    utils
 
 Special-purpose modules
@@ -33,3 +37,4 @@ general interest to others:
 
    dtla
    hidaq
+   unet

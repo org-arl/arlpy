@@ -11,9 +11,4 @@
 """ARL Python tools."""
 
 # import commonly needed sub-packages
-import geo
-import uwa
-import utils
-import comms
-import signal
-import bf
+from arlpy import geo, uwa, utils, comms, signal, bf, plot

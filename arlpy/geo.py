@@ -45,7 +45,7 @@ def _ew(x):
     return 'W' if x < 0 else 'E'
 
 def _normalize(latlong):
-    latlong = map(float, latlong)
+    latlong = list(map(float, latlong))
     if len(latlong) == 2:
         return (latlong[0], latlong[1], 0.0)
     elif len(latlong) == 3:
@@ -61,14 +61,20 @@ def _normalize(latlong):
     else:
         raise ValueError('Incorrect format for latitude/longitude data')
 
-def pos(latlong, zonenum=None):
-    """Convert latitude/longitude to UTM position.
+def pos(latlong, zonenum=None, origin=None):
+    """Convert latitude/longitude to local coordinate system position.
 
-    A specific UTM zone can be forced by specifying `zonenum`, if desired.
+    If an origin is specified, the local coordinate system is set up with that origin
+    and East-North axis. If no origin is specified, the UTM local coordinate system
+    is used. A specific UTM zone can be forced by specifying `zonenum`, if desired.
     """
     latlong = _normalize(latlong)
     pos = _utm.from_latlon(latlong[0], latlong[1], zonenum)
-    return (pos[0], pos[1], latlong[2])
+    opos = (0,0)
+    if origin is not None:
+        origin = _normalize(origin)
+        opos = _utm.from_latlon(origin[0], origin[1], zonenum)
+    return (pos[0]-opos[0], pos[1]-opos[1], latlong[2])
 
 def zone(latlong):
     """Convert latitude/longitude to UTM zone."""
@@ -76,13 +82,22 @@ def zone(latlong):
     pos = _utm.from_latlon(latlong[0], latlong[1])
     return pos[2:4]
 
-def latlong(pos, zone):
-    """Convert UTM position to latitude/longitude.
+def latlong(pos, zone=None, origin=None):
+    """Convert local coordinate system position to latitude/longitude.
 
-    To convert a local position into a global latitude/longitude, the local coordinate
+    To convert a UTM position into a global latitude/longitude, the local coordinate
     system has to be specified in terms of a UTM zone 2-tuple, e.g. ``(32, 'U')``.
+    Alternatively a local coordinate system can be specified in terms of an origin
+    latitude/longitude.
     """
-    geo = _utm.to_latlon(pos[0], pos[1], zone[0], zone[1])
+    opos = (0,0)
+    if origin is not None:
+        if zone is not None:
+            raise ValueError('zone and origin cannot be concurrently specified')
+        origin = _normalize(origin)
+        opos = _utm.from_latlon(origin[0], origin[1])
+        zone = (opos[2], opos[3])
+    geo = _utm.to_latlon(pos[0]+opos[0], pos[1]+opos[1], zone[0], zone[1])
     return (geo[0], geo[1], 0.0 if len(pos) < 3 else pos[2])
 
 def d(latlong):

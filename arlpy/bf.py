@@ -239,8 +239,8 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     """
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft)
-    bfo = _np.zeros((x.shape[0], sd.shape[1], nfft/nyq), dtype=_np.complex if complex_output else _np.float)
-    for i in range(nfft/nyq):
+    bfo = _np.zeros((x.shape[0], sd.shape[1], nfft//nyq), dtype=_np.complex if complex_output else _np.float)
+    for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft
         bfo[:,:,i] = beamformer(x[:,i,:], f, c, sd, complex_output=complex_output)

@@ -12,9 +12,8 @@
 
 import numpy as _np
 import scipy.signal as _sp
-
 from numpy import pi as _pi, sin as _sin, cos as _cos, sqrt as _sqrt
-from signal import time as _time
+from arlpy.signal import time as _time
 
 # set up population count table for fast BER computation
 _MAX_M = 64
@@ -53,7 +52,7 @@ def gray_code(m):
     2
     """
     x = range(m)
-    x = map(lambda a: a ^ (a >> 1), x)
+    x = list(map(lambda a: a ^ (a >> 1), x))
     return _np.asarray(x)
 
 def invert_map(x):
@@ -91,7 +90,7 @@ def bi2sym(x, m):
     x = _np.asarray(x, dtype=_np.int)
     if _np.any(x < 0) or _np.any(x > 1):
         raise ValueError('Invalid data bits')
-    nsym = len(x)/n
+    nsym = int(len(x)/n)
     x = _np.reshape(x, (nsym, n))
     y = _np.zeros(nsym, dtype=_np.int)
     for i in range(n):
@@ -246,31 +245,6 @@ def fsk(m=2, n=None):
     for i in range(m):
         x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
-
-def iqplot(data, spec='.', labels=None):
-    """Plot signal points.
-
-    :param data: complex baseband signal points
-    :param spec: plot specifier (see :func:`matplotlib.pyplot.plot`)
-    :param labels: label for each signal point
-
-    >>> import arlpy
-    >>> arlpy.comms.iqplot(arlpy.comms.psk(8))
-    >>> arlpy.comms.iqplot(arlpy.comms.qam(16), 'rx')
-    >>> arlpy.comms.iqplot(arlpy.comms.psk(4), labels=['00', '01', '11', '10'])
-    """
-    import matplotlib.pyplot as plt
-    data = _np.asarray(data)
-    if labels is None:
-        plt.plot(data.real, data.imag, spec)
-    else:
-        if labels == True:
-            labels = range(len(data))
-        for i in range(len(data)):
-            plt.text(data[i].real, data[i].imag, str(labels[i]))
-    plt.axis([-2, 2, -2, 2])
-    plt.grid()
-    plt.show()
 
 def modulate(data, const):
     """Modulate data into signal points for the specified constellation.
@@ -522,7 +496,8 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     a rectangular pulse shape is assumed.
 
     The upconversion process introduces a group delay depending on the pulse shaping
-    filter. It is usually (len(g)-1)/2 passband samples.
+    filter. It is usually (len(g)-1)/2 passband samples. When g is None, the group
+    delay is (sps-1)/2 passband samples.
 
     :param x: complex baseband data
     :param sps: number of passband samples per baseband symbol
@@ -535,12 +510,13 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     >>> bb = arlpy.comms.modulate(arlpy.comms.random_data(100), arlpy.comms.psk())
     >>> pb = arlpy.comms.upconvert(bb, 6, 27000, 108000, rrc)
     """
-    if g is None:
-        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
     x = _np.asarray(x, dtype=_np.complex)
-    y = _sp.upfirdn(g, x, up=sps)
+    if g is None:
+        y = _np.repeat(x, sps)/_np.sqrt(sps)
+    else:
+        y = _sp.upfirdn(g, x, up=sps)
     if fc != 0:
-        y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
+        y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
         y = y.real
     return y
 
@@ -576,10 +552,13 @@ def downconvert(x, sps, fc, fs=2.0, g=None):
     >>> arlpy.comms.ser(d1, d2)
     0.0
     """
+    if fc == 0:
+        y = _np.asarray(x, dtype=_np.complex)
+    else:
+        y = _sp.hilbert(x)/2
+        y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
     if g is None:
-        g = _np.ones(sps)/_sqrt(sps)  # implied rectangular pulse shaping
-    y = _np.array(x, dtype=_np.complex)
-    if fc != 0:
-        y *= _sqrt(2)*_np.exp(2j*_pi*fc*_time(y, fs))
-    y = _sp.upfirdn(g, y, down=sps)
+        y = _np.sum(_np.reshape(y, (sps, -1), order='F'), axis=0)/_np.sqrt(sps)
+    else:
+        y = _sp.upfirdn(g, y, down=sps)
     return y

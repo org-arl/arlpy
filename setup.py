@@ -5,7 +5,7 @@ with open('README.rst') as f:
 
 setup(
     name='arlpy',
-    version='1.1',
+    version='1.5',
     description='ARL Python Tools',
     long_description=readme,
     author='Mandar Chitre',
@@ -17,6 +17,8 @@ setup(
     install_requires=[
         'numpy>=1.11',
         'scipy>=0.18',
-        'utm>=0.4'
+        'utm>=0.4',
+        'pandas>=0.22.0',
+        'bokeh>=1.2.0'
     ]
 )

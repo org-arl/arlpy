@@ -10,6 +10,7 @@
 
 """Signal processing toolbox."""
 
+import functools
 import operator as _op
 import numpy as _np
 import scipy.signal as _sig
@@ -36,13 +37,14 @@ def time(n, fs):
         n = _np.asarray(n).shape[0]
     return _np.arange(n, dtype=_np.float)/fs
 
-def cw(fc, duration, fs, window=None):
+def cw(fc, duration, fs, window=None, complex_output=False):
     """Generate a sinusoidal pulse.
 
     :param fc: frequency of the pulse in Hz
     :param duration: duration of the pulse in s
     :param fs: sampling rate in Hz
     :param window: window function to use (``None`` means rectangular window)
+    :param complex_output: True to return complex signal, False for a real signal
 
     For supported window functions, see documentation for :func:`scipy.signal.get_window`.
 
@@ -52,9 +54,9 @@ def cw(fc, duration, fs, window=None):
     >>> x3 = arlpy.signal.cw(fc=27000, duration=0.5, fs=250000, window=('kaiser', 4.0))
     """
     n = int(round(duration*fs))
-    x = _np.sin(2*_np.pi*fc*time(n, fs))
+    x = _np.exp(2j*_np.pi*fc*time(n, fs)) if complex_output else _np.sin(2*_np.pi*fc*time(n, fs))
     if window is not None:
-        w = _sig.get_window(window, n)
+        w = _sig.get_window(window, n, False)
         x *= w
     return x
 
@@ -78,7 +80,7 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
     n = int(round(duration*fs))
     x = _sig.chirp(time(n, fs), f1, duration, f2, method)
     if window is not None:
-        w = _sig.get_window(window, n)
+        w = _sig.get_window(window, n, False)
         x *= w
     return x
 
@@ -117,7 +119,7 @@ def mseq(spec, n=None):
             26: [20,24,25,26], 27: [22,25,26,27], 28: [25,28],       29: [27,29],
             30: [7,28,29,30]
         }
-        spec = map(lambda x: x-1, known_specs[spec])  # convert to base 0 taps
+        spec = list(map(lambda x: x-1, known_specs[spec]))  # convert to base 0 taps
     spec.sort(reverse=True)
     m = spec[0]+1
     if n is None:
@@ -125,7 +127,7 @@ def mseq(spec, n=None):
     reg = _np.ones(m, dtype=_np.uint8)
     out = _np.zeros(n)
     for j in range(n):
-        b = reduce(_op.xor, reg[spec], 0)
+        b = functools.reduce(_op.xor, reg[spec], 0)
         reg = _np.roll(reg, 1)
         out[j] = float(2*reg[0]-1)
         reg[0] = b
@@ -159,41 +161,6 @@ def gmseq(spec, theta=None):
     if theta is None:
         theta = _np.arctan(_np.sqrt(len(x)))
     return _np.cos(theta) + 1j*_np.sin(theta)*x
-
-def freqz(b, a=1, fs=2.0, worN=None, whole=False):
-    """Plot frequency response of a filter.
-
-    This is a convenience function to plot frequency response, and internally uses
-    :func:`scipy.signal.freqz` to estimate the response. For further details, see the
-    documentation for :func:`scipy.signal.freqz`.
-
-    :param b: numerator of a linear filter
-    :param a: denominator of a linear filter
-    :param fs: sampling rate in Hz (optional, normalized frequency if not specified)
-    :param worN: see :func:`scipy.signal.freqz`
-    :param whole: see :func:`scipy.signal.freqz`
-    :returns: (frequency vector, frequency response vector)
-
-    >>> import arlpy
-    >>> arlpy.signal.freqz([1,1,1,1,1], fs=120000);
-    >>> w, h = arlpy.signal.freqz([1,1,1,1,1], fs=120000)
-    """
-    import matplotlib.pyplot as plt
-    w, h = _sig.freqz(b, a, worN, whole)
-    f = w*fs/(2*_np.pi)
-    fig = plt.figure()
-    ax1 = fig.add_subplot(111)
-    plt.plot(f, 20*_np.log10(abs(h)), 'b')
-    plt.ylabel('Amplitude [dB]', color='b')
-    plt.xlabel('Frequency [Hz]')
-    plt.grid()
-    ax1.twinx()
-    angles = _np.unwrap(_np.angle(h))
-    plt.plot(f, angles, 'g')
-    plt.ylabel('Angle (radians)', color='g')
-    plt.axis('tight')
-    plt.show()
-    return w, h
 
 def bb2pb(x, fd, fc, fs=None):
     """Convert baseband signal to passband.
@@ -329,7 +296,7 @@ def lfilter_gen(b, a):
     if a[0] != 1.0:
         raise ValueError('a[0] must be 1')
     f = _lfilter_gen(b, a)
-    f.next()
+    f.__next__()
     return f
 
 def nco_gen(fc, fs=2.0, phase0=0, wrap=2*_np.pi, func=lambda x: _np.exp(1j*x)):
@@ -419,3 +386,46 @@ def correlate_periodic(a, v=None):
     if _np.isrealobj(a) and (v is None or _np.isrealobj(v)):
         x = x.real
     return x
+
+def goertzel(f, x, fs=2.0, filter=False):
+    """Goertzel algorithm for single tone detection.
+
+    The output of the Goertzel algorithm is the same as a single bin DFT if
+    ``f/(fs/N)`` is an integer, where ``N`` is the number of points in signal ``x``.
+
+    The detection metric returned by this function is the magnitude of the output
+    of the Goertzel algorithm at the end of the input block. If ``filter`` is set
+    to ``true``, the complex time series at the output of the IIR filter is returned,
+    rather than just the detection metric.
+
+    :param f: frequency of tone of interest in Hz
+    :param x: real or complex input sequence
+    :param fs: sampling frequency of x in Hz
+    :param filter: output complex time series if true, detection metric otherwise (default: false)
+    :returns: detection metric or complex time series
+
+    >>> import arlpy
+    >>> x1 = arlpy.signal.cw(64, 1, 512)
+    >>> g1 = arlpy.signal.goertzel(64, x1, 512)
+    >>> g1
+    256.0
+    >>> g2 = arlpy.signal.goertzel(32, x1, 512)
+    >>> g2
+    0.0
+    """
+    n = x.size
+    m = f/(fs/n)
+    if filter:
+        y = _np.empty(n, dtype=_np.complex)
+    w1 = 0
+    w2 = 0
+    for j in range(n):
+        w0 = 2*_np.cos(2*_np.pi*m/n)*w1 - w2 + x[j]
+        if filter:
+            y[j] = w0 - _np.exp(-2j*_np.pi*m/n)*w1
+        w2 = w1
+        w1 = w0
+    if filter:
+        return y
+    w0 = 2*_np.cos(2*_np.pi*m/n)*w1 - w2
+    return _np.abs(w0 - _np.exp(-2j*_np.pi*m/n)*w1)
