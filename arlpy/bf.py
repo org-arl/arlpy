@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2016, Mandar Chitre
+# Copyright (c) 2016-2019, Mandar Chitre
 #
 # This file is part of arlpy which is released under Simplified BSD License.
 # See file LICENSE or go to http://www.opensource.org/licenses/BSD-3-Clause
@@ -12,22 +12,24 @@
 
 import numpy as _np
 import scipy.signal as _sig
+import arlpy.plot as _plt
+import arlpy.utils as _utils
 
 def normalize(x):
     """Normalize array time series data to be zero-mean and unit variance.
 
-    :param x: time series data for multiple sensors (column per sensor)
+    :param x: time series data for multiple sensors (row per sensor)
     :returns: normalized time series data
     """
-    m = _np.mean(x, axis=0, keepdims=True)
-    v = _np.var(x, axis=0, keepdims=True)
+    m = _np.mean(x, axis=-1, keepdims=True)
+    v = _np.var(x, axis=-1, keepdims=True)
     v[v == 0] = 1
     return (x-m)/_np.sqrt(v)
 
 def stft(x, nfft, overlap=0, window=None):
     """Compute short time Fourier transform (STFT) of array data.
 
-    :param x: time series data for multiple sensors (column per sensor)
+    :param x: time series data for multiple sensors (row per sensor)
     :param nfft: window length in samples
     :param overlap: number of samples of overlap between windows
     :param window: window function to use (None means rectangular window)
@@ -37,15 +39,13 @@ def stft(x, nfft, overlap=0, window=None):
     """
     if overlap != 0:
         raise ValueError('Non-zero overlaps not implemented')  # TODO
-    m, n = x.shape
+    n, m = x.shape
     if m % nfft != 0:
-        m = int(m/nfft)*nfft
-    x = _np.reshape(x[:m,:], (-1, nfft, n))
+        m = (m//nfft)*nfft
+    x = _np.reshape(x[:,:m], (n, -1, nfft))
     if window is not None:
-        w = _sig.get_window(window, nfft)
-        w = w[_np.newaxis,:,_np.newaxis]
-        x *= w
-    x = _np.fft.fft(x, axis=1)
+        x *= _sig.get_window(window, nfft)
+    x = _np.fft.fft(x, axis=-1)
     return x
 
 def steering(pos, theta):
@@ -65,7 +65,7 @@ def steering(pos, theta):
 
     :param pos: sensor positions (m)
     :param theta: steering directions (radians)
-    :returns: steering distances (m) with a column for each direction
+    :returns: steering distances (m) with a row for each direction
 
     >>> import numpy as np
     >>> from arlpy import bf, utils
@@ -92,13 +92,13 @@ def steering(pos, theta):
         elev = theta[:,1]
         dvec = _np.array([_np.cos(elev)*_np.cos(azim), _np.cos(elev)*_np.sin(azim), _np.sin(elev)])
         dist = _np.dot(pos, dvec)
-    return -dist
+    return -dist.T
 
 def bartlett(x, fc, c, sd, shading=None, complex_output=False):
     """Bartlett beamformer.
 
     The array data must be 2D with baseband time series for each sensor in
-    individual columns. The steering vectors must also be 2D with a column per
+    individual rows. The steering vectors must also be 2D with a row per
     steering direction, as produced by the :func:`steering` function.
 
     If the array data is specified as 1D array, it is assumed to represent multiple sensors
@@ -113,7 +113,7 @@ def bartlett(x, fc, c, sd, shading=None, complex_output=False):
     :param sd: steering distances (m)
     :param shading: window function to use for array shading (None means no shading)
     :param complex_output: True for complex signal, False for beamformed power
-    :returns: beamformer output with time as the first axis, and steering directions as the other
+    :returns: beamformer output with time as the last axis, and steering directions as the first
 
     >>> from arlpy import bf
     >>> import numpy as np
@@ -122,54 +122,57 @@ def bartlett(x, fc, c, sd, shading=None, complex_output=False):
     >>> y = bf.bartlett(x, 1000, 1500, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
-        x = x[_np.newaxis,:]
-    if x.shape[1] != sd.shape[0]:
+        x = x[:,_np.newaxis]
+    if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
         a = _np.ones_like(sd)
     else:
         wavelength = float(c)/fc
-        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
     if shading is not None:
-        s = _sig.get_window(shading, a.shape[0])
-        a *= s[:,_np.newaxis]/_np.sqrt(_np.mean(s**2))
-    bfo = _np.dot(x, a.conj())
+        s = _sig.get_window(shading, a.shape[1])
+        a *= s/_np.sqrt(_np.mean(s**2))
+    bfo = _np.dot(a.conj(), x)
     return bfo if complex_output else _np.abs(bfo)**2
 
-def bartlett_beampattern(i, fc, c, sd, shading=None):
+def bartlett_beampattern(i, fc, c, sd, shading=None, theta=None, show=False):
     """Computes the beampattern for a Bartlett beamformer.
 
-    :param i: column index of target steering distances
+    :param i: row index of target steering distances
     :param fc: carrier frequency for the array data (Hz)
     :param c: wave propagation speed (m/s)
     :param sd: steering distances (m)
     :param shading: window function to use for array shading (None means no shading)
-    :returns: beampattern power response at all directions corresponding to columns in sd
+    :param theta: angles (in radians) for display if beampattern is plotted
+    :param show: True to plot the beampattern, False to return it
+    :returns: beampattern power response at all directions corresponding to rows in sd
 
     >>> from arlpy import bf
-    >>> import matplotlib.pyplot as plt
     >>> import numpy as np
     >>> sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
-    >>> bp = bf.bartlett_beampattern(90, 1500, 1500, sd)
-    >>> plt.plot(np.linspace(-90, 90, 181), 20*np.log10(bp))
-    >>> plt.xlabel('Angle (deg)')
-    >>> plt.ylabel('Response (dB)')
-    >>> plt.axis([-90, 90, -80, 5])
-    >>> plt.grid()
-    >>> plt.show()
+    >>> bp = bf.bartlett_beampattern(90, 1500, 1500, sd, show=True)
     """
     wavelength = float(c)/fc
-    a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
+    a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
     if shading is not None:
-        s = _sig.get_window(shading, a.shape[0])
-        a *= s[:,_np.newaxis]/_np.sqrt(_np.mean(s**2))
-    return _np.abs(_np.dot(a[:,i].conj(), a))**2
+        s = _sig.get_window(shading, a.shape[1])
+        a *= s/_np.sqrt(_np.mean(s**2))
+    bp = _np.abs(_np.dot(a.conj(), a[i]))**2
+    if show:
+        if theta is None:
+            _plt.plot(_utils.pow2db(bp), ylabel='Array response (dB)', title='Beam #'+str(i))
+        else:
+            a = theta * 180/_np.pi
+            _plt.plot(a, _utils.pow2db(bp), xlabel='Angle (deg)', ylabel='Array response (dB)', title='Beam #%d @ %0.1f deg'%(i, a[i]))
+    else:
+        return bp
 
 def capon(x, fc, c, sd, complex_output=False):
     """Capon beamformer.
 
     The array data must be 2D with baseband time series for each sensor in
-    individual columns. The steering vectors must also be 2D with a column per
+    individual rows. The steering vectors must also be 2D with a row per
     steering direction, as produced by the :func:`steering` function.
 
     If the array data is specified as 1D array, it is assumed to represent multiple sensors
@@ -192,16 +195,17 @@ def capon(x, fc, c, sd, complex_output=False):
     >>> y = bf.capon(x, 1000, 1500, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
-        x = x[_np.newaxis,:]
-    if x.shape[1] != sd.shape[0]:
+        x = x[:,_np.newaxis]
+    if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        w = _np.ones_like(sd)
+        a = _np.ones_like(sd)
     else:
         wavelength = float(c)/fc
-        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[0])
-        # TODO compute w
-    bfo = _np.dot(x, w.conj())
+        a = _np.exp(-2j*_np.pi*sd/wavelength)/_np.sqrt(sd.shape[1])
+    # TODO compute w and multiply with a
+    raise ValueError('Capon not implemented yet')
+    bfo = _np.dot(a.conj(), x)
     return bfo if complex_output else _np.abs(bfo)**2
 
 def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=False):
@@ -212,7 +216,7 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     the entire bandwidth.
 
     The array data must be 2D with baseband time series for each sensor in
-    individual columns. The steering vectors must also be 2D with a column per
+    individual rows. The steering vectors must also be 2D with a row per
     steering direction, as produced by the :func:`steering` function.
 
     The STFT window size should be chosen such that the corresponding distance (based on wave
@@ -229,7 +233,8 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     :param f0: carrier frequency (for baseband data) (Hz)
     :param beamformer: narrowband beamformer to use
     :param complex_output: True for complex signal, False for beamformed power
-    :returns: beamformer output with time as the first axis, and steering directions as the other
+    :returns: beamformer output with steering directions as the first axis, time as the second,
+              and if complex output, fft bins as the third
 
     >>> from arlpy import bf
     >>> # passband time series array data assumed to be loaded in x, sampled at fs
@@ -237,11 +242,13 @@ def broadband(x, fs, c, nfft, sd, f0=0, beamformer=bartlett, complex_output=Fals
     >>> sd = bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> y = bf.broadband(x, fs, 256, sd, beamformer=capon)
     """
+    if nfft/fs < (_np.max(sd)-_np.min(sd))/c:
+        raise ValueError('nfft too small for this array')
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft)
-    bfo = _np.zeros((x.shape[0], sd.shape[1], nfft//nyq), dtype=_np.complex if complex_output else _np.float)
+    bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex if complex_output else _np.float)
     for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft
-        bfo[:,:,i] = beamformer(x[:,i,:], f, c, sd, complex_output=complex_output)
-    return bfo if complex_output else _np.sum(bfo, axis=2)
+        bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, c, sd, complex_output=complex_output)
+    return bfo if complex_output else _np.sum(bfo, axis=-1)
