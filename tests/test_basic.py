@@ -39,6 +39,37 @@ class UtilsTestSuite(MyTestCase):
         x = utils.linspace3d(0, 1, 2, 0, 1, 3, 0, 0, 1)
         self.assertArrayEqual(x, [[0, 0, 0], [0, 0.5, 0], [0, 1, 0], [1, 0, 0], [1, 0.5, 0], [1, 1, 0]])
 
+    def test_rotation_matrix(self):
+        x = utils.rotation_matrix(0, 0, 0)
+        self.assertArrayEqual(x, [[1, 0, 0], [0, 1, 0], [0, 0, 1]], precision=6)
+        x = utils.rotation_matrix(np.pi/2, 0, 0)
+        self.assertArrayEqual(x, [[1, 0, 0], [0, 0, -1], [0, 1, 0]], precision=6)
+        x = utils.rotation_matrix(np.pi, 0, 0)
+        self.assertArrayEqual(x, [[1, 0, 0], [0, -1, 0], [0, 0, -1]], precision=6)
+        x = utils.rotation_matrix(0, np.pi/2, 0)
+        self.assertArrayEqual(x, [[0, 0, 1], [0, 1, 0], [-1, 0, 0]], precision=6)
+        x = utils.rotation_matrix(0, np.pi, 0)
+        self.assertArrayEqual(x, [[-1, 0, 0], [0, 1, 0], [0, 0, -1]], precision=6)
+        x = utils.rotation_matrix(0, 0, np.pi/2)
+        self.assertArrayEqual(x, [[0, -1, 0], [1, 0, 0], [0, 0, 1]], precision=6)
+        x = utils.rotation_matrix(0, 0, np.pi)
+        self.assertArrayEqual(x, [[-1, 0, 0], [0, -1, 0], [0, 0, 1]], precision=6)
+
+    def test_broadcastable_to(self):
+        x = np.array([1,2,3])
+        y = utils.broadcastable_to(x, (2,3,4), 1)
+        self.assertArrayEqual(y, [[1],[2],[3]])
+        y = utils.broadcastable_to(x, (3,2,4), 0)
+        self.assertArrayEqual(y, [[[1]],[[2]],[[3]]])
+        y = utils.broadcastable_to(x, (2,4,3), 2)
+        self.assertArrayEqual(y, [1,2,3])
+        y = utils.broadcastable_to(x, (2,4,3), -1)
+        self.assertArrayEqual(y, [1,2,3])
+        y = utils.broadcastable_to(x, (2,4,3))
+        self.assertArrayEqual(y, [1,2,3])
+        y = utils.broadcastable_to(x, (2,3,4))
+        self.assertArrayEqual(y, [[1],[2],[3]])
+
     def test_progress(self):
         # no regression test, since this is a display utility function
         pass
@@ -386,79 +417,79 @@ class CommsTestSuite(MyTestCase):
 class BeamformerTestSuite(MyTestCase):
 
     def test_normalize(self):
-        x = np.empty((1024, 10), dtype=np.complex)
+        x = np.empty((10, 1024), dtype=np.complex)
         for i in range(10):
-            x[:, i] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
+            x[i,:] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
         y = bf.normalize(x)
-        self.assertArrayEqual(np.mean(y, axis=0), np.zeros(10), precision=6)
-        self.assertArrayEqual(np.var(y, axis=0), [0, 1, 1, 1, 1, 1, 1, 1, 1, 1], precision=6)
+        self.assertArrayEqual(np.mean(y, axis=-1), np.zeros(10), precision=6)
+        self.assertArrayEqual(np.var(y, axis=-1), [0, 1, 1, 1, 1, 1, 1, 1, 1, 1], precision=6)
 
     def test_stft(self):
-        x = np.ones((1024, 5))
+        x = np.ones((5, 1024))
         y = bf.stft(x, 64)
-        self.assertEqual(y.shape, (16, 64, 5))
-        self.assertArrayEqual(y[:,0,:], 64*np.ones((16, 5)))
-        self.assertArrayEqual(y[:,1:,:], np.zeros((16, 63, 5)))
+        self.assertEqual(y.shape, (5, 16, 64))
+        self.assertArrayEqual(y[:,:,0], 64*np.ones((5, 16)))
+        self.assertArrayEqual(y[:,:,1:], np.zeros((5, 16, 63)))
         y = bf.stft(x, 64, window='hanning')
-        self.assertEqual(y.shape, (16, 64, 5))
-        self.assertArrayEqual(y[:,0,:], 32*np.ones((16, 5)), precision=0)
-        self.assertArrayEqual(y[0,:,0], np.fft.fft(sp.get_window('hanning', 64)))
+        self.assertEqual(y.shape, (5, 16, 64))
+        self.assertArrayEqual(y[:,:,0], 32*np.ones((5, 16)), precision=0)
+        self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hanning', 64)))
 
     def test_steering(self):
         x = bf.steering(np.linspace(0, 5, 11), 0)
-        self.assertArrayEqual(x, np.zeros((11, 1)))
+        self.assertArrayEqual(x, np.zeros((1, 11)))
         x = bf.steering(np.linspace(0, 5, 11), [-np.pi/2, np.pi/4])
-        self.assertEqual(x.shape, (11, 2))
-        self.assertArrayEqual(x[:,0], -np.linspace(2.5, -2.5, 11))
-        self.assertArrayEqual(x[:,1], -np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
+        self.assertEqual(x.shape, (2, 11))
+        self.assertArrayEqual(x[0], -np.linspace(2.5, -2.5, 11))
+        self.assertArrayEqual(x[1], -np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
         pos = [[0.0, 0], [0.5, 0], [1.0, 0], [1.5, 0], [2.0, 0]]
         x = bf.steering(pos, [[-np.pi/2, 0], [np.pi/4, 0]])
-        self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2))
+        self.assertEqual(x.shape, (2, 5))
+        self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0, 0.0], [0, 0.5], [0, 1.0], [0, 1.5], [0, 2.0]]
         x = bf.steering(pos, [[0, -np.pi/2], [0, np.pi/4]])
-        self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2))
+        self.assertEqual(x.shape, (2, 5))
+        self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0.0, 0, 0], [0.5, 0, 0], [1.0, 0, 0], [1.5, 0, 0], [2.0, 0, 0]]
         x = bf.steering(pos, [[np.pi, 0], [np.pi/4, 0]])
-        self.assertEqual(x.shape, (5, 2))
-        self.assertArrayEqual(x[:,0], -np.linspace(1, -1, 5))
-        self.assertArrayEqual(x[:,1], -np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
+        self.assertEqual(x.shape, (2, 5))
+        self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
+        self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
 
     def test_bartlett(self):
         sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
         x = bf.bartlett(np.ones(11), 1500, 1500, sd)
-        self.assertEqual(x.shape, (1, 181))
-        self.assertEqual(np.argmax(x[0,:]), 90)
+        self.assertEqual(x.shape, (181, 1))
+        self.assertEqual(np.argmax(x[:,0]), 90)
         x = bf.bartlett(np.ones(11), 1500, 1500, sd, shading='hanning')
-        self.assertEqual(x.shape, (1, 181))
-        self.assertEqual(np.argmax(x[0,:]), 90)
+        self.assertEqual(x.shape, (181, 1))
+        self.assertEqual(np.argmax(x[:,0]), 90)
         y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
         x = bf.bartlett(y, 1500, 1500, sd)
-        self.assertEqual(np.argmax(x[0,:]), 135)
+        self.assertEqual(np.argmax(x[:,0]), 135)
         z = signal.cw(1500, 1, 8485)                          # 1.5 kHz passband signal from -45 deg
-        y = np.zeros((z.shape[0], 11))
+        y = np.zeros((11, z.shape[0]))
         for i in range(11):
-            y[2*i:-1,i] = z[:-2*i-1]
+            y[i,2*i:-1] = z[:-2*i-1]
         y1 = signal.pb2bb(y, 8485, 1500, 1000)
         x = bf.bartlett(y1, 1500, 1500, sd)
-        self.assertEqual(x.shape, (1000, 181))
-        self.assertEqual(np.argmax(x[10,:]), 45)
+        self.assertEqual(x.shape, (181, 1000))
+        self.assertEqual(np.argmax(x[:,10]), 45)
         x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500, complex_output=True)
-        self.assertEqual(x.shape, (250, 181, 4))
+        self.assertEqual(x.shape, (181, 250, 4))
         x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500)
-        self.assertEqual(x.shape, (250, 181))
-        self.assertEqual(np.argmax(x[10,:]), 45)
+        self.assertEqual(x.shape, (181, 250))
+        self.assertEqual(np.argmax(x[:,10]), 45)
         x = bf.broadband(y, 8485, 1500, 256, sd, complex_output=True)
-        self.assertEqual(x.shape, (33, 181, 128))
+        self.assertEqual(x.shape, (181, 33, 128))
         x = bf.broadband(y, 8485, 1500, 256, sd)
-        self.assertEqual(x.shape, (33, 181))
-        self.assertEqual(np.argmax(x[10,:]), 45)
+        self.assertEqual(x.shape, (181, 33))
+        self.assertEqual(np.argmax(x[:,10]), 45)
         y1 = signal.pb2bb(y, 8485, 1250, 1000)
         x = bf.broadband(y1, 1000, 1500, 16, sd, f0=1250)
-        self.assertEqual(np.argmax(x[10,:]), 45)
+        self.assertEqual(np.argmax(x[:,10]), 45)
 
     def test_bartlett_beampattern(self):
         sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
