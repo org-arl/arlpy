@@ -14,6 +14,7 @@ import functools
 import operator as _op
 import numpy as _np
 import scipy.signal as _sig
+import arlpy.utils as _utils
 
 def time(n, fs):
     """Generate a time vector for time series.
@@ -84,9 +85,13 @@ def sweep(f1, f2, duration, fs, method='linear', window=None):
         x *= w
     return x
 
-def envelope(x):
-    """Generate a Hilbert envelope of the real signal x."""
-    return _np.abs(_sig.hilbert(x, axis=0))
+def envelope(x, axis=-1):
+    """Generate a Hilbert envelope of the real signal x.
+
+    :param x: real passband signal
+    :param axis: axis of the signal, if multiple signals specified
+    """
+    return _np.abs(_sig.hilbert(x, axis=axis))
 
 def mseq(spec, n=None):
     """Generate m-sequence.
@@ -162,7 +167,7 @@ def gmseq(spec, theta=None):
         theta = _np.arctan(_np.sqrt(len(x)))
     return _np.cos(theta) + 1j*_np.sin(theta)*x
 
-def bb2pb(x, fd, fc, fs=None):
+def bb2pb(x, fd, fc, fs=None, axis=-1):
     """Convert baseband signal to passband.
 
     For communication applications, one may wish to use :func:`arlpy.comms.upconvert` instead,
@@ -174,20 +179,19 @@ def bb2pb(x, fd, fc, fs=None):
     :param fd: sampling rate of baseband signal in Hz
     :param fc: carrier frequency in passband in Hz
     :param fs: sampling rate of passband signal in Hz (``None`` => same as `fd`)
+    :param axis: axis of the signal, if multiple signals specified
     :returns: real passband signal, sampled at `fs`
     """
     if fs is None or fs == fd:
         y = _np.array(x, dtype=_np.complex)
         fs = fd
     else:
-        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd, axis=0)
+        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd, axis=axis)
     osc = _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(y,fs))
-    if y.ndim == 2:
-        osc = osc[:,_np.newaxis]
-    y *= osc
+    y *= _utils.broadcastable_to(osc, y.shape, axis)
     return y.real
 
-def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
+def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None, axis=-1):
     """Convert passband signal to baseband.
 
     The baseband conversion uses a low-pass filter after downconversion, with a
@@ -207,36 +211,40 @@ def pb2bb(x, fs, fc, fd=None, flen=127, cutoff=None):
     :param fd: sampling rate of baseband signal in Hz (``None`` => same as `fs`)
     :param flen: number of taps in the low-pass FIR filter
     :param cutoff: cutoff frequency in Hz (``None`` means auto-select)
+    :param axis: axis of the signal, if multiple signals specified
     :returns: complex baseband signal, sampled at `fd`
     """
     if cutoff is None:
         cutoff = 0.6*fd if fd is not None else 1.1*_np.abs(fc)
-    osc = _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(x,fs))
-    if x.ndim == 2:
-        osc = osc[:,_np.newaxis]
-    y = x * osc
+    osc = _np.sqrt(2)*_np.exp(-2j*_np.pi*fc*time(x.shape[axis],fs))
+    y = x * _utils.broadcastable_to(osc, x.shape, axis)
     hb = _sig.firwin(flen, cutoff=cutoff, nyq=fs/2.0)
-    y = _sig.filtfilt(hb, 1, y, axis=0)
+    y = _sig.filtfilt(hb, 1, y, axis=axis)
     if fd is not None and fd != fs:
-        y = _sig.resample_poly(y, 2*fd, fs)[::2]
+        y = _sig.resample_poly(y, 2*fd, fs, axis=axis)
+        y = _np.apply_along_axis(lambda a: a[::2], axis, y)
     return y
 
-def mfilter(s, x, axis=0, complex_output=False):
+def mfilter(s, x, complex_output=False, axis=-1):
     """Matched filter recevied signal using a reference signal.
 
     :param s: reference signal
     :param x: recevied signal
-    :param axis: axis of the signal, if multiple signals specified
     :param complex_output: True to return complex signal, False for absolute value of complex signal
+    :param axis: axis of the signal, if multiple recevied signals specified
     """
     hb = _np.conj(_np.flipud(s))
-    x = _np.pad(x, (0, len(s)-1), 'constant')
-    y = _sig.lfilter(hb, 1, x, axis)[len(s)-1:]
+    if axis < 0:
+        axis += len(x.shape)
+    padding = []
+    x = _np.apply_along_axis(lambda a: _np.pad(a, (0, len(s)-1), 'constant'), axis, x)
+    y = _sig.lfilter(hb, 1, x, axis=axis)
+    y = _np.apply_along_axis(lambda a: a[len(s)-1:], axis, y)
     if not complex_output:
         y = _np.abs(y)
     return y
 
-def lfilter0(b, a, x, axis=0):
+def lfilter0(b, a, x, axis=-1):
     """Filter data with an IIR or FIR filter with zero DC group delay.
 
     :func:`scipy.signal.lfilter` provides a way to filter a signal `x` using a FIR/IIR
@@ -261,7 +269,7 @@ def lfilter0(b, a, x, axis=0):
     w, g = _sig.group_delay((b, a))
     ndx = _np.argmin(_np.abs(w))
     d = int(round(g[ndx]))
-    x = _np.pad(x, (0, d), 'constant')
+    x = _np.apply_along_axis(lambda a: _np.pad(a, (0, d), 'constant'), axis, x)
     y = _sig.lfilter(b, a, x, axis)[d:]
     return y
 
