@@ -117,6 +117,41 @@ def rotation_matrix(alpha, beta, gamma):
                                [            0.,              0., 1.]]), R)
     return R
 
+def broadcastable_to(x, shape, axis=None):
+    """Convert 1D array to be broadcastable along specified axis.
+
+    :param x: array to broadcast
+    :param shape: shape to broadcast to
+    :param axis: axis to broadcast along
+
+    Reshapes the array to the minimum dimensions such that it can be
+    broadcasted to the given shape along the specified axis. If an axis
+    is not specified, the first axis that matches the size of x is used.
+
+    >>> import arlpy
+    >>> import numpy as np
+    >>> arlpy.utils.broadcastable_to(np.array([1,2,3]), (5,3,2), 1)
+    array([[1],
+           [2],
+           [3]])
+    """
+    x = _np.asarray(x)
+    if x.ndim != 1:
+        raise ValueError('x should be a 1D array')
+    if axis is None:
+        axis = _np.argmax(len(x) == _np.array(shape))
+        if len(x) != shape[axis]:
+            raise ValueError('No axis matches length of x')
+    if axis < 0:
+        axis += len(shape)
+    if axis < 0 or axis >= len(shape):
+        raise ValueError('Bad axis specification')
+    if len(x) != shape[axis]:
+        raise ValueError('x should be (%d,) array, but is %s'%(shape[axis],str(x.shape)))
+    for j in range(len(shape)-axis-1):
+        x = x[:,_np.newaxis]
+    return x
+
 def progress(n, width=50):
     """Display progress bar for long running operations.
 
