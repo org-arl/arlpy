@@ -101,20 +101,20 @@ def rotation_matrix(alpha, beta, gamma):
 
     Rotation is applied around x, y and z axis in that order.
     """
-    R = _eye(3)
+    R = _np.eye(3)
     if alpha != 0:
-        R = _dot(_array([[1.,          0.,           0.],
-                         [0., _cos(alpha), -_sin(alpha)],
-                         [0., _sin(alpha),  _cos(alpha)]]), R)
+        R = _np.dot(_np.array([[1.,             0.,              0.],
+                               [0., _np.cos(alpha), -_np.sin(alpha)],
+                               [0., _np.sin(alpha),  _np.cos(alpha)]]), R)
     if beta != 0:
-        R = _dot(_array([[ _cos(beta), 0., _sin(beta)],
-                         [ 0.,         1.,         0.],
-                         [-_sin(beta), 0., _cos(beta)]]), R)
+        R = _np.dot(_np.array([[ _np.cos(beta), 0., _np.sin(beta)],
+                               [            0., 1.,            0.],
+                               [-_np.sin(beta), 0., _np.cos(beta)]]), R)
 
     if gamma != 0:
-        R = _dot(_array([[_cos(gamma), -_sin(gamma), 0.],
-                         [_sin(gamma),  _cos(gamma), 0.],
-                         [         0.,           0., 1.]]), R)
+        R = _np.dot(_np.array([[_np.cos(gamma), -_np.sin(gamma), 0.],
+                               [_np.sin(gamma),  _np.cos(gamma), 0.],
+                               [            0.,              0., 1.]]), R)
     return R
 
 def progress(n, width=50):
