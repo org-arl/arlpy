@@ -389,6 +389,8 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
         else:
             _warnings.warn('Unknown pooling: '+pooling)
             y = y[::n]
+        if len(x) > len(y):
+            x = x[:len(y)]
         _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text=desc, text_font_size="8pt", text_alpha=0.5))
     if style is not None:
         _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend=legend)
