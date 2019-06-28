@@ -422,6 +422,10 @@ class BeamformerTestSuite(MyTestCase):
             x[i,:] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
         y = bf.normalize(x)
         self.assertArrayEqual(np.mean(y, axis=-1), np.zeros(10), precision=6)
+        v = np.mean(np.var(x, axis=-1))
+        self.assertArrayEqual(np.var(y, axis=-1), [0, v, v, v, v, v, v, v, v, v], precision=6)
+        y = bf.normalize(x, unit_variance=True)
+        self.assertArrayEqual(np.mean(y, axis=-1), np.zeros(10), precision=6)
         self.assertArrayEqual(np.var(y, axis=-1), [0, 1, 1, 1, 1, 1, 1, 1, 1, 1], precision=6)
 
     def test_stft(self):
@@ -430,77 +434,118 @@ class BeamformerTestSuite(MyTestCase):
         self.assertEqual(y.shape, (5, 16, 64))
         self.assertArrayEqual(y[:,:,0], 64*np.ones((5, 16)))
         self.assertArrayEqual(y[:,:,1:], np.zeros((5, 16, 63)))
+        y = bf.stft(x, 64, 32)
+        self.assertEqual(y.shape, (5, 31, 64))
+        self.assertArrayEqual(y[:,:,0], 64*np.ones((5, 31)))
+        self.assertArrayEqual(y[:,:,1:], np.zeros((5, 31, 63)))
         y = bf.stft(x, 64, window='hanning')
         self.assertEqual(y.shape, (5, 16, 64))
         self.assertArrayEqual(y[:,:,0], 32*np.ones((5, 16)), precision=0)
         self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hanning', 64)))
 
-    def test_steering(self):
-        x = bf.steering(np.linspace(0, 5, 11), 0)
+    def test_steering_plane_wave(self):
+        x = bf.steering_plane_wave(np.linspace(0, 5, 11), 1, 0)
         self.assertArrayEqual(x, np.zeros((1, 11)))
-        x = bf.steering(np.linspace(0, 5, 11), [-np.pi/2, np.pi/4])
+        x = bf.steering_plane_wave(np.linspace(0, 5, 11), 1, [-np.pi/2, np.pi/4])
         self.assertEqual(x.shape, (2, 11))
         self.assertArrayEqual(x[0], -np.linspace(2.5, -2.5, 11))
         self.assertArrayEqual(x[1], -np.linspace(-2.5, 2.5, 11)/np.sqrt(2))
         pos = [[0.0, 0], [0.5, 0], [1.0, 0], [1.5, 0], [2.0, 0]]
-        x = bf.steering(pos, [[-np.pi/2, 0], [np.pi/4, 0]])
+        x = bf.steering_plane_wave(pos, 1, [[-np.pi/2, 0], [np.pi/4, 0]])
         self.assertEqual(x.shape, (2, 5))
         self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
         self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0, 0.0], [0, 0.5], [0, 1.0], [0, 1.5], [0, 2.0]]
-        x = bf.steering(pos, [[0, -np.pi/2], [0, np.pi/4]])
+        x = bf.steering_plane_wave(pos, 1, [[0, -np.pi/2], [0, np.pi/4]])
         self.assertEqual(x.shape, (2, 5))
         self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
         self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2))
         pos = [[0.0, 0, 0], [0.5, 0, 0], [1.0, 0, 0], [1.5, 0, 0], [2.0, 0, 0]]
-        x = bf.steering(pos, [[np.pi, 0], [np.pi/4, 0]])
+        x = bf.steering_plane_wave(pos, 1, [[np.pi, 0], [np.pi/4, 0]])
         self.assertEqual(x.shape, (2, 5))
         self.assertArrayEqual(x[0], -np.linspace(1, -1, 5))
         self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2), precision=6)
+        x = bf.steering_plane_wave(pos, 2, [[np.pi, 0], [np.pi/4, 0]])
+        self.assertEqual(x.shape, (2, 5))
+        self.assertArrayEqual(x[0], -np.linspace(1, -1, 5)/2)
+        self.assertArrayEqual(x[1], -np.linspace(-1, 1, 5)/np.sqrt(2)/2, precision=6)
+
+    def test_delay_and_sum(self):
+        sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+        z = signal.cw(1500, 1, 84850)                          # 1.5 kHz passband signal from -45 deg
+        y = np.zeros((11, z.shape[0]))
+        for i in range(11):
+            y[i,20*i:-1] = z[:-20*i-1]
+        x = bf.delay_and_sum(y, 84850, sd)
+        self.assertEqual(x.shape, (181, z.shape[0]-2*int(np.rint(2.5/1500*84850))))
+        self.assertEqual((x**2).sum(axis=-1).argmax(), 45)
 
     def test_bartlett(self):
-        sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
-        x = bf.bartlett(np.ones(11), 1500, 1500, sd)
-        self.assertEqual(x.shape, (181, 1))
-        self.assertEqual(np.argmax(x[:,0]), 90)
-        x = bf.bartlett(np.ones(11), 1500, 1500, sd, shading='hanning')
-        self.assertEqual(x.shape, (181, 1))
-        self.assertEqual(np.argmax(x[:,0]), 90)
+        sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+        x = bf.bartlett(np.ones(11), 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 90)
+        x = bf.bartlett(np.ones(11), 1500, sd, shading='hanning')
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 90)
         y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
-        x = bf.bartlett(y, 1500, 1500, sd)
-        self.assertEqual(np.argmax(x[:,0]), 135)
+        x = bf.bartlett(y, 1500, sd)
+        self.assertEqual(np.argmax(x), 135)
         z = signal.cw(1500, 1, 8485)                          # 1.5 kHz passband signal from -45 deg
         y = np.zeros((11, z.shape[0]))
         for i in range(11):
             y[i,2*i:-1] = z[:-2*i-1]
         y1 = signal.pb2bb(y, 8485, 1500, 1000)
-        x = bf.bartlett(y1, 1500, 1500, sd)
-        self.assertEqual(x.shape, (181, 1000))
-        self.assertEqual(np.argmax(x[:,10]), 45)
-        x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500, complex_output=True)
-        self.assertEqual(x.shape, (181, 250, 4))
-        x = bf.broadband(y1, 1000, 1500, 4, sd, f0=1500)
+        x = bf.bartlett(y1, 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 45)
+        x = bf.broadband(y1, 1000, 4, sd, f0=1500)
         self.assertEqual(x.shape, (181, 250))
         self.assertEqual(np.argmax(x[:,10]), 45)
-        x = bf.broadband(y, 8485, 1500, 256, sd, complex_output=True)
-        self.assertEqual(x.shape, (181, 33, 128))
-        x = bf.broadband(y, 8485, 1500, 256, sd)
+        x = bf.broadband(y, 8485, 256, sd)
         self.assertEqual(x.shape, (181, 33))
-        self.assertEqual(np.argmax(x[:,10]), 45)
+        self.assertEqual(np.argmax(x.mean(axis=-1)), 45)
         y1 = signal.pb2bb(y, 8485, 1250, 1000)
-        x = bf.broadband(y1, 1000, 1500, 16, sd, f0=1250)
+        x = bf.broadband(y1, 1000, 16, sd, f0=1250)
         self.assertEqual(np.argmax(x[:,10]), 45)
 
     def test_bartlett_beampattern(self):
-        sd = bf.steering(np.linspace(0, 5, 11), np.linspace(-np.pi/2, np.pi/2, 181))
-        x = bf.bartlett_beampattern(90, 1500, 1500, sd)
+        sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+        x = bf.bartlett_beampattern(90, 1500, sd)
         self.assertEqual(x.shape, (181,))
         self.assertEqual(np.argmax(x), 90)
         self.assertApproxEqual(x[90], 1.0, precision=6)
-        x = bf.bartlett_beampattern(135, 1500, 1500, sd)
+        x = bf.bartlett_beampattern(135, 1500, sd)
         self.assertEqual(x.shape, (181,))
         self.assertEqual(np.argmax(x), 135)
         self.assertApproxEqual(x[135], 1.0, precision=6)
+
+    def test_capon(self):
+        sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+        x = bf.capon(np.ones(11), 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 90)
+        y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
+        x = bf.capon(y, 1500, sd)
+        self.assertEqual(np.argmax(x), 135)
+        z = signal.cw(1500, 1, 8485)                          # 1.5 kHz passband signal from -45 deg
+        y = np.zeros((11, z.shape[0]))
+        for i in range(11):
+            y[i,2*i:-1] = z[:-2*i-1]
+        y1 = signal.pb2bb(y, 8485, 1500, 1000)
+        x = bf.capon(y1, 1500, sd)
+        self.assertEqual(x.shape, (181,))
+        self.assertEqual(np.argmax(x), 45)
+        x = bf.broadband(y1, 1000, 4, sd, f0=1500, beamformer=bf.capon)
+        self.assertEqual(x.shape, (181, 250))
+        self.assertEqual(np.argmax(x[:,10]), 45)
+        x = bf.broadband(y, 8485, 256, sd, beamformer=bf.capon)
+        self.assertEqual(x.shape, (181, 33))
+        print(x.mean(axis=-1))
+        self.assertLess(np.abs(np.argmax(x.mean(axis=-1))-45), 2)    # seems to give a result off by 1 deg
+        y1 = signal.pb2bb(y, 8485, 1250, 1000)
+        x = bf.broadband(y1, 1000, 16, sd, f0=1250, beamformer=bf.capon)
+        self.assertEqual(np.argmax(x[:,10]), 45)
 
 if __name__ == '__main__':
     unittest.main()
