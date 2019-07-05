@@ -549,8 +549,8 @@ class _Bellhop:
         fh, fname = _mkstemp(suffix='.env')
         _os.close(fh)
         fname_base = fname[:-4]
-        rv = self._bellhop(fname_base)
         self._unlink(fname_base+'.env')
+        rv = self._bellhop(fname_base)
         self._unlink(fname_base+'.prt')
         self._unlink(fname_base+'.log')
         return rv
