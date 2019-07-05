@@ -446,7 +446,9 @@ def plot_rays(rays, env=None, invert_colors=False, **kwargs):
     >>> pm.plot_rays(rays, width=1000)
     """
     rays = rays.sort_values('bottom_bounces', ascending=False)
-    max_amp = _np.max(_np.abs(rays.bottom_bounces))
+    max_amp = _np.max(_np.abs(rays.bottom_bounces)) if len(rays.bottom_bounces) > 0 else 0
+    if max_amp <= 0:
+        max_amp = 1
     divisor = 1
     xlabel = 'Range (m)'
     r = []
