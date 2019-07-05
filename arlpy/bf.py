@@ -15,11 +15,11 @@ import scipy.signal as _sig
 import arlpy.plot as _plt
 import arlpy.utils as _utils
 
-def normalize(x, unit_variance=False):
+def normalize(x, unit_variance=True):
     """Normalize array timeseries data to be zero-mean and equal variance.
 
-    The average signal power across the array is retained, unless `unit_variance`
-    is set to True, so that the beamformed data can be compared with other datsets.
+    The average signal power across the array is retained if `unit_variance`
+    is set to True so that the beamformed data can be compared with other datsets.
 
     :param x: passband real timeseries data for multiple sensors (row per sensor)
     :param unit_variance: True to make timeseries unit variance,
@@ -271,7 +271,7 @@ def capon(x, fc, sd, complex_output=False):
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
         return _np.array([1.0/a[j].conj().dot(_np.linalg.inv(R)).dot(a[j]).real for j in range(a.shape[0])])
 
-def broadband(x, fs, nfft, sd, f0=0, overlap=0, beamformer=bartlett):
+def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer=bartlett):
     """Frequency-domain broadband beamformer operating on time-domain input data.
 
     The broadband beamformer is implementing by taking STFT of the data, applying narrowband
@@ -293,6 +293,8 @@ def broadband(x, fs, nfft, sd, f0=0, overlap=0, beamformer=bartlett):
     :param nfft: STFT window size
     :param sd: steering distances (m)
     :param f0: carrier frequency (for baseband data) (Hz)
+    :param fmin: minimum frequency to integrate (Hz)
+    :param fmax: maximum frequency to integrate (Hz)
     :param overlap: window overlap for STFT
     :param beamformer: narrowband beamformer to use
     :returns: beamformer output with steering directions as the first axis, time as the second,
@@ -312,5 +314,6 @@ def broadband(x, fs, nfft, sd, f0=0, overlap=0, beamformer=bartlett):
     for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft
-        bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True)
+        if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
+            bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True)
     return (_np.abs(bfo)**2).sum(axis=-1)
