@@ -420,7 +420,7 @@ class BeamformerTestSuite(MyTestCase):
         x = np.empty((10, 1024), dtype=np.complex)
         for i in range(10):
             x[i,:] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
-        y = bf.normalize(x)
+        y = bf.normalize(x, unit_variance=False)
         self.assertArrayEqual(np.mean(y, axis=-1), np.zeros(10), precision=6)
         v = np.mean(np.var(x, axis=-1))
         self.assertArrayEqual(np.var(y, axis=-1), [0, v, v, v, v, v, v, v, v, v], precision=6)
