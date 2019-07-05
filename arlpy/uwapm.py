@@ -665,19 +665,40 @@ class _Bellhop:
             for j in range(dir.shape[0]):
                 f.write("%0.4f %0.4f\n" % (dir[j,0], dir[j,1]))
 
-    def _readf(self, f, types):
-        p = _re.split(r' +', f.readline().strip())
+    def _readf(self, f, types, dtype=str):
+        if type(f) is str:
+            p = _re.split(r' +', f.strip())
+        else:
+            p = _re.split(r' +', f.readline().strip())
         for j in range(len(p)):
             if len(types) > j:
                 p[j] = types[j](p[j])
+            else:
+                p[j] = dtype(p[j])
         return tuple(p)
 
     def _load_arrivals(self, fname_base):
         with open(fname_base+'.arr', 'rt') as f:
-            freq, tx_depth_count, rx_depth_count, rx_range_count = self._readf(f, (float, int, int, int))
-            tx_depth = self._readf(f, (float,)*tx_depth_count)
-            rx_depth = self._readf(f, (float,)*rx_depth_count)
-            rx_range = self._readf(f, (float,)*rx_range_count)
+            hdr = f.readline()
+            if hdr.find('2D') >= 0:
+                freq = self._readf(f, (float,))
+                tx_depth_info = self._readf(f, (int,), float)
+                tx_depth_count = tx_depth_info[0]
+                tx_depth = tx_depth_info[1:]
+                assert tx_depth_count == len(tx_depth)
+                rx_depth_info = self._readf(f, (int,), float)
+                rx_depth_count = rx_depth_info[0]
+                rx_depth = rx_depth_info[1:]
+                assert rx_depth_count == len(rx_depth)
+                rx_range_info = self._readf(f, (int,), float)
+                rx_range_count = rx_range_info[0]
+                rx_range = rx_range_info[1:]
+                assert rx_range_count == len(rx_range)
+            else:
+                freq, tx_depth_count, rx_depth_count, rx_range_count = self._readf(hdr, (float, int, int, int))
+                tx_depth = self._readf(f, (float,)*tx_depth_count)
+                rx_depth = self._readf(f, (float,)*rx_depth_count)
+                rx_range = self._readf(f, (float,)*rx_range_count)
             arrivals = []
             for j in range(tx_depth_count):
                 f.readline()
