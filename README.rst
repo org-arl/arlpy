@@ -17,6 +17,8 @@ and developers working on signal processing, communication and underwater acoust
 
     * Signal processing (`arlpy.signal`)
     * Communications (`arlpy.comms`)
+    * Beamforming and array processing (`arlpy.bf`)
+    * Stable distributions (`arlpy.stable`)
     * Geographical coordinates (`arlpy.geo`)
     * Underwater acoustics (`arlpy.uwa`)
     * Underwater acoustic propagation modeling (`arlpy.uwapm`)
@@ -30,6 +32,7 @@ The following modules are specific to tools available at the ARL and may not be 
 general interest to others:
 
     * Digital Towed Array (`arlpy.dtla`)
+    * ROMANIS (`arlpy.romanis`)
     * HiDAQ (`arlpy.hidaq`)
     * UNET (`arlpy.unet`)
 

@@ -20,6 +20,8 @@ and developers working on signal processing, communication and underwater acoust
 
    signal
    comms
+   bf
+   stable
    geo
    uwa
    uwapm
@@ -36,5 +38,6 @@ general interest to others:
    :maxdepth: 1
 
    dtla
+   romanis
    hidaq
    unet

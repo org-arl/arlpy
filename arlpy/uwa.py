@@ -219,7 +219,7 @@ def bubble_soundspeed(void_fraction, c=soundspeed(), c_gas=340, relative_density
 
     >>> import arlpy
     >>> arlpy.uwa.bubble_soundspeed(1e-5)
-    TODO
+    1402.133
     """
     m = _np.sqrt(relative_density)
     return 1/(1/c*_np.sqrt((void_fraction*(c/c_gas)**2*m+(1-void_fraction)/m)*(void_fraction/m+(1-void_fraction)*m)))
