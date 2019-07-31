@@ -594,7 +594,7 @@ class _Bellhop:
 
     def _unlink(self, f):
         try:
-            os.unlink(f)
+            _os.unlink(f)
         except:
             pass
 
