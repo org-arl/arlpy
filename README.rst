@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/org-arl/arlpy.svg?branch=master
+    :target: https://travis-ci.org/org-arl/arlpy
+
 ARL Python Tools
 ================
 
