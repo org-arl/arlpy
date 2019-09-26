@@ -223,3 +223,37 @@ def bubble_soundspeed(void_fraction, c=soundspeed(), c_gas=340, relative_density
     """
     m = _np.sqrt(relative_density)
     return 1/(1/c*_np.sqrt((void_fraction*(c/c_gas)**2*m+(1-void_fraction)/m)*(void_fraction/m+(1-void_fraction)*m)))
+
+def pressure(x, sensitivity, gain, volt_params=None):
+    """Convert the real signal x to an acoustic pressure signal in micropascal.
+    
+    :param x: real signal in voltage or bit depth (number of bits)
+    :param sensitivity: receiving sensitivity in dB re 1V per micropascal
+    :param gain: preamplifier gain in dB
+    :param volt_params: (nbits, v_ref) is used to convert the number of bits 
+        to voltage where nbits is the number of bits of each sample and v_ref 
+        is the reference voltage, default to None  
+    :returns: acoustic pressure signal micropascal
+    
+    If `volt_params` is provided, the sample unit of x is in number of bits,
+    else is in voltage.  
+    """
+    nu = 10**(sensitivity/20)
+    G = 10**(gain/20)
+    if volt_params is not None:
+        nbits, v_ref = volt_params   
+        x = x*v_ref/(2**(nbits-1))
+    return x/(nu*G)
+
+def spl(x, ref=1):
+    """Get Sound Pressure Level (SPL) of the acoustic pressure signal x.
+    
+    :param x: acoustic pressure signal in micropascal
+    :param ref: reference acoustic pressure in micropascal, default to 1
+    :returns: SPL in dB
+    
+    In water, the common reference is 1 micropascal. In air, the common
+    reference is 20 micropascal.
+    """
+    rmsx = _np.power(_np.mean(_np.power(x, 2)), 1/2)
+    return 20*_np.log10(rmsx/ref)
