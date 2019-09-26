@@ -233,7 +233,7 @@ def pressure(x, sensitivity, gain, volt_params=None):
     :param volt_params: (nbits, v_ref) is used to convert the number of bits 
         to voltage where nbits is the number of bits of each sample and v_ref 
         is the reference voltage, default to None  
-    :returns: acoustic pressure signal micropascal
+    :returns: acoustic pressure signal in micropascal
     
     If `volt_params` is provided, the sample unit of x is in number of bits,
     else is in voltage.  
