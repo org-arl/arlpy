@@ -143,6 +143,21 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.bubble_soundspeed(0, 1500), 1500)
         self.assertApproxEqual(uwa.bubble_soundspeed(1e-5, 1500), 1372)
         self.assertApproxEqual(uwa.bubble_soundspeed(1, 1500, 330), 330)
+    
+    def test_pressure(self):
+        nbits = 16
+        V_ref = 1.0 
+        x_volt = V_ref*signal.cw(64, 1, 512)
+        x_bit = x_volt*(2**(nbits-1))
+        sensitivity = 0
+        gain = 0
+        p1 = uwa.pressure(x_volt, sensitivity, gain)
+        p2 = uwa.pressure(x_bit, sensitivity, gain, volt_params=(nbits, V_ref))
+        self.assertArrayEqual(p1, p2)
+    
+    def test_spl(self):
+        p = signal.cw(64, 1, 512)
+        self.assertApproxEqual(uwa.spl(p), 20*np.log10(1/np.sqrt(2)))
 
 class SignalTestSuite(MyTestCase):
 
