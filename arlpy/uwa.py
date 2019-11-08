@@ -237,6 +237,16 @@ def pressure(x, sensitivity, gain, volt_params=None):
     
     If `volt_params` is provided, the sample unit of x is in number of bits,
     else is in voltage.  
+
+    >>> import arlpy 
+    >>> nbits = 16
+    >>> V_ref = 1.0 
+    >>> x_volt = V_ref*signal.cw(64, 1, 512)
+    >>> x_bit = x_volt*(2**(nbits-1))
+    >>> sensitivity = 0
+    >>> gain = 0
+    >>> p1 = arlpy.uwa.pressure(x_volt, sensitivity, gain)
+    >>> p2 = arlpy.uwa.pressure(x_bit, sensitivity, gain, volt_params=(nbits, V_ref))
     """
     nu = 10**(sensitivity/20)
     G = 10**(gain/20)
@@ -250,10 +260,15 @@ def spl(x, ref=1):
     
     :param x: acoustic pressure signal in micropascal
     :param ref: reference acoustic pressure in micropascal, default to 1
-    :returns: SPL in dB
+    :returns: average SPL in dB re micropascal
     
     In water, the common reference is 1 micropascal. In air, the common
     reference is 20 micropascal.
+
+    >>> import arlpy
+    >>> p = signal.cw(64, 1, 512)
+    >>> arlpy.uwa.spl(p)
+    -3.0103
     """
-    rmsx = _np.power(_np.mean(_np.power(x, 2)), 1/2)
+    rmsx = _np.sqrt(_np.mean(_np.power(_np.abs(x), 2)))
     return 20*_np.log10(rmsx/ref)
