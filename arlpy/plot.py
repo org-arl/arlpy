@@ -393,7 +393,10 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
             x = x[:len(y)]
         _figure.add_layout(_bmodels.Label(x=5, y=5, x_units='screen', y_units='screen', text=desc, text_font_size="8pt", text_alpha=0.5))
     if style is not None:
-        _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend=legend)
+        if legend is None:
+            _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness)
+        else:
+            _figure.line(x, y, line_color=color, line_dash=style, line_width=thickness, legend_label=legend)
     if marker is not None:
         scatter(x[::(mskip+1)], y[::(mskip+1)], marker=marker, filled=filled, size=size, color=color, legend=legend, hold=True)
     if not hold and not _hold:
@@ -434,22 +437,29 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     if color is None:
         color = _colors[_color % len(_colors)]
         _color += 1
+    kwargs = {'size': size, 'line_color': color}
+    if filled:
+        kwargs['fill_color'] = color
+    if legend is not None:
+        kwargs['legend_label'] = legend
     if marker == '.':
-        _figure.circle(x, y, size=size/2, line_color=color, fill_color=color, legend=legend)
+        kwargs['size'] = kwargs['size']/2
+        kwargs['fill_color'] = color
+        _figure.circle(x, y, **kwargs)
     elif marker == 'o':
-        _figure.circle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.circle(x, y, **kwargs)
     elif marker == 's':
-        _figure.square(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.square(x, y, **kwargs)
     elif marker == '*':
-        _figure.asterisk(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.asterisk(x, y, **kwargs)
     elif marker == 'x':
-        _figure.x(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.x(x, y, **kwargs)
     elif marker == '+':
-        _figure.cross(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.cross(x, y, **kwargs)
     elif marker == 'd':
-        _figure.diamond(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.diamond(x, y, **kwargs)
     elif marker == '^':
-        _figure.triangle(x, y, size=size, line_color=color, fill_color=color if filled else None, legend=legend)
+        _figure.triangle(x, y, **kwargs)
     elif marker is not None:
         _warnings.warn('Bad marker type: '+marker)
     if not hold and not _hold:
@@ -769,5 +779,5 @@ def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', t
     fig.extra_y_ranges = {'phase': _bmodels.Range1d(start=-_np.pi*units, end=_np.pi*units)}
     fig.add_layout(_bmodels.LinearAxis(y_range_name='phase', axis_label='Phase (degrees)' if degrees else 'Phase (radians)'), 'right')
     phase = _np.angle(h)*units
-    fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend='Phase', y_range_name='phase')
+    fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend_label='Phase', y_range_name='phase')
     _hold_enable(hold)
