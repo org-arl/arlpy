@@ -12,6 +12,7 @@
 
 import numpy as _np
 import scipy.signal as _sig
+import numpy.linalg as _LA
 import arlpy.plot as _plt
 import arlpy.utils as _utils
 
@@ -271,7 +272,69 @@ def capon(x, fc, sd, complex_output=False):
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
         return _np.array([1.0/a[j].conj().dot(_np.linalg.inv(R)).dot(a[j]).real for j in range(a.shape[0])])
 
-def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer=bartlett):
+def music(x, fc, sd, complex_output=False,num_sig_components = 1):
+    """Frequency-domain MUSIC beamformer.
+
+    The timeseries data must be 2D with narrowband complex timeseries for each sensor in
+    individual rows. The steering delays must also be 2D with a row per steering direction.
+
+    If the timeseries data is specified as 1D array, it is assumed to represent multiple sensors
+    at a single time.
+
+    The covariance matrix of x is estimated over the entire timeseries, and used to compute
+    the optimal weights for the MUSIC beamformer via eigen-decomposition.
+
+    :param x: narrowband complex timeseries data for multiple sensors (row per sensor)
+    :param fc: carrier frequency for the array data (Hz)
+    :param sd: steering delays (s)
+    :param complex_output: True for complex signal, False for beamformed power
+    :param num_sig_components: Number of signal eigenvectors (rest are considered noise)
+    :returns: beamformer output averaged across time
+
+    >>> from arlpy import bf
+    >>> import numpy as np
+    >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
+    >>> # sensor positions assumed to be in pos
+    >>> y = bf.music(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    """
+    if x.ndim == 1:
+        x = x[:,_np.newaxis]
+    if x.shape[0] != sd.shape[1]:
+        raise ValueError('Sensor count mismatch in data and steering vector')
+    if fc == 0:
+        a = _np.ones_like(sd)
+    else:
+        a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
+    if complex_output:
+        R = covariance(x)
+        if _np.linalg.cond(R) > 10000:
+            R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
+        A, B = _LA.eigh(R)
+        idx = A.argsort()[::-1]
+        lmbd = A[idx] # Sorted vector of eigenvalues
+        B = B[:, idx] # Eigenvectors rearranged accordingly
+        En = B[:, num_sig_components:len(B)] # Noise eigenvectors
+
+        V = _np.matmul(En,En.conj().T)#En.conj().dot(En)#
+        w = _np.array([V.dot(a[j])/(a[j].conj().dot(V).dot(a[j])) for j in range(a.shape[0])])
+        return w.conj().dot(x)
+
+    else:
+        R = covariance(x)
+        if _np.linalg.cond(R) > 10000:
+            R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
+
+        A, B = _LA.eigh(R)
+        idx = A.argsort()[::-1]
+        lmbd = A[idx] # Sorted vector of eigenvalues
+        B = B[:, idx] # Eigenvectors rearranged accordingly
+        En = B[:, num_sig_components:len(E)] # Noise eigenvectors
+
+        V = _np.matmul(En,En.conj().T)
+
+        return _np.array([1.0/a[j].conj().dot(V).dot(a[j]).real for j in range(a.shape[0])])
+
+def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer=bartlett,num_sig_components = 1):
     """Frequency-domain broadband beamformer operating on time-domain input data.
 
     The broadband beamformer is implementing by taking STFT of the data, applying narrowband
@@ -297,6 +360,7 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     :param fmax: maximum frequency to integrate (Hz)
     :param overlap: window overlap for STFT
     :param beamformer: narrowband beamformer to use
+    :param num_sig_components: Number of signal eigenvectors if using MUSIC beamformer (rest are considered noise)
     :returns: beamformer output with steering directions as the first axis, time as the second,
               and if complex output, fft bins as the third
 
@@ -311,9 +375,16 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft, overlap)
     bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex)
-    for i in range(nfft//nyq):
-        f = i if i < nfft/2 else i-nfft
-        f = f0 + f*float(fs)/nfft
-        if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
-            bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True)
+    if beamformer == music:
+        for i in range(nfft//nyq):
+            f = i if i < nfft/2 else i-nfft
+            f = f0 + f*float(fs)/nfft
+            if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
+                bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True,num_sig_components = num_sig_components)
+    else:
+        for i in range(nfft//nyq):
+            f = i if i < nfft/2 else i-nfft
+            f = f0 + f*float(fs)/nfft
+            if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
+                bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True)
     return (_np.abs(bfo)**2).sum(axis=-1)
