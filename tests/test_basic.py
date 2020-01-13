@@ -269,6 +269,15 @@ class SignalTestSuite(MyTestCase):
         self.assertEqual(g2.size, 513)
         self.assertApproxEqual(np.abs(g2[-1]), 512/2)
 
+    def test_detect_impulses(self):
+        nsamp = 1000
+        true_ind_imp = np.array([10, 115, 641, 888])
+        x = np.zeros((nsamp))
+        x[true_ind_imp] = 1
+        x += np.random.normal(0, 0.1, nsamp)
+        ind_imp, _ = signal.detect_impulses(x, fs=100000, k=10, tdist=1e-3)
+        self.assertArrayEqual(true_ind_imp, ind_imp)
+        
 class CommsTestSuite(MyTestCase):
 
     def test_random_data(self):
