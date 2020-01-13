@@ -437,3 +437,29 @@ def goertzel(f, x, fs=2.0, filter=False):
         return y
     w0 = 2*_np.cos(2*_np.pi*m/n)*w1 - w2
     return _np.abs(w0 - _np.exp(-2j*_np.pi*m/n)*w1)
+
+def detect_impulses(x, fs, k=10, tdist=1e-3):
+    """Detect impulses in `x`
+
+    The minimum height of impulses is defined by `a+k*b`
+    where `a` is median of the envelope of `x` and `b` is median 
+    absolute deviation (MAD) of the envelope of `x`.   
+
+    :param x: real signal
+    :param fs: sampling frequency in Hz
+    :param k: multiple of MAD for the impulse minimum height (default: 10)
+    :param tdist: minimum time difference between neighbouring impulses in sec (default: 1e-3)
+    :returns: indices and heights of detected impulses
+
+    >>> nsamp = 1000
+    >>> ind_impulses = np.array([10, 115, 641, 888])
+    >>> x = np.zeros((nsamp))
+    >>> x[ind_impulses] = 1
+    >>> x += np.random.normal(0, 0.1, nsamp)
+    >>> ind_pks, h_pks = signal.detect_impulses(x, fs=100000, k=10, tdist=1e-3)
+    """
+    env = envelope(x)
+    height = _np.median(env)+k*_np.median(_np.abs(env-_np.median(env)))
+    distance = int(tdist*fs)
+    ind_imp, properties = _sig.find_peaks(env, height=height, distance=distance)
+    return ind_imp, properties["peak_heights"]
