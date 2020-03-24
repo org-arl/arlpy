@@ -103,7 +103,7 @@ def create_env2d(**kv):
         if k not in env.keys():
             raise KeyError('Unknown key: '+k)
         env[k] = _np.asarray(v, dtype=_np.float) if _np.size(v) > 1 else v
-    check_env2d(env)
+    env = check_env2d(env)
     return env
 
 def check_env2d(env):
@@ -146,6 +146,15 @@ def check_env2d(env):
             assert env['soundspeed'][-1,0] >= max_depth, 'Last depth in soundspeed array must be beyond water depth: '+str(max_depth)+' m'
             assert _np.all(_np.diff(env['soundspeed'][:,0]) > 0), 'Soundspeed array must be strictly monotonic in depth'
             assert env['soundspeed_interp'] == spline or env['soundspeed_interp'] == linear, 'Invalid interpolation type: '+str(env['soundspeed_interp'])
+            if not(max_depth in env['soundspeed'][:,0]):
+                indlarger = _np.argwhere(env['soundspeed'][:,0]>max_depth)[0][0]
+                if env['soundspeed_interp'] == spline:
+                    tck = _interp.splrep(env['soundspeed'][:,0], env['soundspeed'][:,1], s=0)
+                    insert_ss_val = _interp.splev(max_depth, tck, der=0)
+                else:
+                    insert_ss_val = _np.interp(max_depth, env['soundspeed'][:,0], env['soundspeed'][:,1])
+                env['soundspeed'] = _np.insert(env['soundspeed'],indlarger,[max_depth,insert_ss_val],axis = 0)
+                env['soundspeed'] = env['soundspeed'][:indlarger+1,:]
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
@@ -155,6 +164,7 @@ def check_env2d(env):
             assert env['tx_directionality'].ndim == 2, 'tx_directionality must be an Nx2 array'
             assert env['tx_directionality'].shape[1] == 2, 'tx_directionality must be an Nx2 array'
             assert _np.all(env['tx_directionality'][:,0] >= -180) and _np.all(env['tx_directionality'][:,0] <= 180), 'tx_directionality angles must be in [-90, 90]'
+        return env
     except AssertionError as e:
         raise ValueError(e.args)
 
@@ -167,7 +177,7 @@ def print_env(env):
     >>> env = pm.create_env2d(depth=40, soundspeed=1540)
     >>> pm.print_env(env)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     keys = ['name'] + sorted(list(env.keys()-['name']))
     for k in keys:
         v = str(env[k])
@@ -199,7 +209,7 @@ def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='ora
     >>> env = pm.create_env2d(depth=[[0, 40], [100, 30], [500, 35], [700, 20], [1000,45]])
     >>> pm.plot_env(env)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     min_x = 0
     max_x = _np.max(env['rx_range'])
     if max_x-min_x > 10000:
@@ -257,7 +267,7 @@ def plot_ssp(env, **kwargs):
     >>> env = pm.create_env2d(soundspeed=[[ 0, 1540], [10, 1530], [20, 1532], [25, 1533], [30, 1535]])
     >>> pm.plot_ssp(env)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     if _np.size(env['soundspeed']) == 1:
         if _np.size(env['depth']) > 1:
             max_y = _np.max(env['depth'][:,1])
@@ -288,7 +298,7 @@ def compute_arrivals(env, model=None, debug=False):
     >>> arrivals = pm.compute_arrivals(env)
     >>> pm.plot_arrivals(arrivals)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     (model_name, model) = _select_model(env, arrivals, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
@@ -310,7 +320,7 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
     >>> rays = pm.compute_eigenrays(env)
     >>> pm.plot_rays(rays, width=1000)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     env = env.copy()
     if _np.size(env['tx_depth']) > 1:
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
@@ -337,7 +347,7 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     >>> rays = pm.compute_rays(env)
     >>> pm.plot_rays(rays, width=1000)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     if _np.size(env['tx_depth']) > 1:
         env = env.copy()
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
@@ -361,7 +371,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
     >>> tloss = pm.compute_transmission_loss(env, mode=pm.incoherent)
     >>> pm.plot_transmission_loss(tloss, width=1000)
     """
-    check_env2d(env)
+    env = check_env2d(env)
     if mode not in [coherent, incoherent, semicoherent]:
         raise ValueError('Unknown transmission loss mode: '+mode)
     if _np.size(env['tx_depth']) > 1:
@@ -517,7 +527,7 @@ def models(env=None, task=None):
     ['bellhop']
     """
     if env is not None:
-        check_env2d(env)
+        env = check_env2d(env)
     if (env is None and task is not None) or (env is not None and task is None):
         raise ValueError('env and task should be both specified together')
     rv = []
