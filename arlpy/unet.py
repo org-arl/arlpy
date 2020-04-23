@@ -37,10 +37,10 @@ def get_signals(filename):
             adc = int(m1.group(1)) if m1 else 1
             m1 = _re.search(r' channels:(\d+) ', s)
             ch = int(m1.group(1)) if m1 else 1
-            m1 = _re.search(r' fc:(\d+) ', s)
-            fc = int(m1.group(1)) if m1 else 0
-            m1 = _re.search(r' fs:(\d+) ', s)
-            fs = int(m1.group(1)) if m1 else 0
+            m1 = _re.search(r' fc:(\d+\.?\d*) ', s)
+            fc = float(m1.group(1)) if m1 else 0
+            m1 = _re.search(r' fs:(\d+\.?\d*) ', s)
+            fs = float(m1.group(1)) if m1 else 0
             m1 = _re.search(r' baseband samples', s)
             bb = True if m1 else False
             m1 = _re.search(r' preamble:(\d+) ', s)
