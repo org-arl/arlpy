@@ -71,6 +71,17 @@ def create_env2d(**kv):
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d(depth=20, soundspeed=[[0,1540], [5,1535], [10,1535], [20,1530]])
 
+    A range-and-depth dependent sound speed profile can be provided as a Pandas frame:
+
+    >>> import arlpy.uwapm as pm
+    >>> import pandas as pd
+    >>> ssp2 = pd.DataFrame({
+              0: [1540, 1530, 1532, 1533],     # profile at 0 m range
+            100: [1540, 1535, 1530, 1533],     # profile at 100 m range
+            200: [1530, 1520, 1522, 1525] },   # profile at 200 m range
+            index=[0, 10, 20, 30])             # depths of the profile entries in m
+    >>> env = pm.create_env2d(depth=20, soundspeed=ssp2)
+
     The default environment has a constant water depth. A range dependent bathymetry
     can be provided as a Nx2 array of (range, water depth):
 
@@ -102,7 +113,7 @@ def create_env2d(**kv):
     for k, v in kv.items():
         if k not in env.keys():
             raise KeyError('Unknown key: '+k)
-        env[k] = _np.asarray(v, dtype=_np.float) if _np.size(v) > 1 else v
+        env[k] = _np.asarray(v, dtype=_np.float) if not isinstance(v, _pd.DataFrame) and _np.size(v) > 1 else v
     env = check_env2d(env)
     return env
 
@@ -138,7 +149,12 @@ def check_env2d(env):
             max_depth = _np.max(env['depth'][:,1])
         else:
             max_depth = env['depth']
-        if _np.size(env['soundspeed']) > 1:
+        if isinstance(env['soundspeed'], _pd.DataFrame):
+            assert env['soundspeed'].shape[0] > 3, 'soundspeed profile must have at least 4 points'
+            assert env['soundspeed'].index[0] <= 0, 'First depth in soundspeed array must be 0 m'
+            assert env['soundspeed'].index[-1] >= max_depth, 'Last depth in soundspeed array must be beyond water depth: '+str(max_depth)+' m'
+            assert _np.all(_np.diff(env['soundspeed'].index) > 0), 'Soundspeed array must be strictly monotonic in depth'
+        elif _np.size(env['soundspeed']) > 1:
             assert env['soundspeed'].ndim == 2, 'soundspeed must be a scalar or an Nx2 array'
             assert env['soundspeed'].shape[1] == 2, 'soundspeed must be a scalar or an Nx2 array'
             assert env['soundspeed'].shape[0] > 3, 'soundspeed profile must have at least 4 points'
@@ -263,27 +279,31 @@ def plot_ssp(env, **kwargs):
 
     Other keyword arguments applicable for `arlpy.plot.plot()` are also supported.
 
+    If the sound speed profile is range-dependent, this function only plots the first profile.
+
     >>> import arlpy.uwapm as pm
     >>> env = pm.create_env2d(soundspeed=[[ 0, 1540], [10, 1530], [20, 1532], [25, 1533], [30, 1535]])
     >>> pm.plot_ssp(env)
     """
     env = check_env2d(env)
-    if _np.size(env['soundspeed']) == 1:
+    svp = env['soundspeed']
+    if isinstance(svp, _pd.DataFrame):
+        svp = _np.hstack((_np.array([svp.index]).T, _np.asarray(svp)))
+    if _np.size(svp) == 1:
         if _np.size(env['depth']) > 1:
             max_y = _np.max(env['depth'][:,1])
         else:
             max_y = env['depth']
-        _plt.plot([env['soundspeed'], env['soundspeed']], [0, -max_y], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
+        _plt.plot([svp, svp], [0, -max_y], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
     elif env['soundspeed_interp'] == spline:
-        s = env['soundspeed']
-        ynew = _np.linspace(_np.min(s[:,0]), _np.max(s[:,0]), 100)
-        tck = _interp.splrep(s[:,0], s[:,1], s=0)
+        s = svp
+        ynew = _np.linspace(_np.min(svp[:,0]), _np.max(svp[:,0]), 100)
+        tck = _interp.splrep(svp[:,0], svp[:,1], s=0)
         xnew = _interp.splev(ynew, tck, der=0)
         _plt.plot(xnew, -ynew, xlabel='Soundspeed (m/s)', ylabel='Depth (m)', hold=True, **kwargs)
-        _plt.plot(s[:,1], -s[:,0], marker='.', style=None, **kwargs)
+        _plt.plot(svp[:,1], -svp[:,0], marker='.', style=None, **kwargs)
     else:
-        s = env['soundspeed']
-        _plt.plot(s[:,1], -s[:,0], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
+        _plt.plot(svp[:,1], -svp[:,0], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
 
 def compute_arrivals(env, model=None, debug=False):
     """Compute arrivals between each transmitter and receiver.
@@ -577,22 +597,22 @@ class _Bellhop:
             semicoherent: ['S', self._load_shd]
         }
         fname_base = self._create_env_file(env, taskmap[task][0])
+        results = None
         if self._bellhop(fname_base):
-            try:
-                results = taskmap[task][1](fname_base)
-            except FileNotFoundError:
-                print('[WARN] Bellhop did not generate expected output file')
-                err = self._check_error(fname_base)
-                if err is not None:
-                    print(err)
-                results = None
-        else:
-            results = None
+            err = self._check_error(fname_base)
+            if err is not None:
+                print(err)
+            else:
+                try:
+                    results = taskmap[task][1](fname_base)
+                except FileNotFoundError:
+                    print('[WARN] Bellhop did not generate expected output file')
         if debug:
             print('[DEBUG] Bellhop working files: '+fname_base+'.*')
         else:
             self._unlink(fname_base+'.env')
             self._unlink(fname_base+'.bty')
+            self._unlink(fname_base+'.ssp')
             self._unlink(fname_base+'.ati')
             self._unlink(fname_base+'.sbp')
             self._unlink(fname_base+'.prt')
@@ -634,17 +654,27 @@ class _Bellhop:
         self._print(fh, "'"+env['name']+"'")
         self._print(fh, "%0.6f" % (env['frequency']))
         self._print(fh, "1")
+        svp = env['soundspeed']
+        svp_interp = 'S' if env['soundspeed_interp'] == spline else 'C'
+        if isinstance(svp, _pd.DataFrame):
+            if len(svp.columns) > 1:
+                svp_interp = 'Q'
+            else:
+                svp = _np.hstack((_np.array([svp.index]).T, _np.asarray(svp)))
         if env['surface'] is None:
-            self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
+            self._print(fh, "'%cVWT'" % svp_interp)
         else:
-            self._print(fh, "'%cVWT*'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
+            self._print(fh, "'%cVWT*'" % svp_interp)
             self._create_bty_ati_file(fname_base+'.ati', env['surface'], env['surface_interp'])
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
         self._print(fh, "1 0.0 %0.6f" % (max_depth))
-        svp = env['soundspeed']
         if _np.size(svp) == 1:
             self._print(fh, "0.0 %0.6f /" % (svp))
             self._print(fh, "%0.6f %0.6f /" % (max_depth, svp))
+        elif svp_interp == 'Q':
+            for j in range(svp.shape[0]):
+                self._print(fh, "%0.6f %0.6f /" % (svp.index[j], svp.iloc[j,0]))
+            self._create_ssp_file(fname_base+'.ssp', svp)
         else:
             for j in range(svp.shape[0]):
                 self._print(fh, "%0.6f %0.6f /" % (svp[j,0], svp[j,1]))
@@ -681,6 +711,15 @@ class _Bellhop:
             f.write(str(dir.shape[0])+"\n")
             for j in range(dir.shape[0]):
                 f.write("%0.6f %0.6f\n" % (dir[j,0], dir[j,1]))
+
+    def _create_ssp_file(self, filename, svp):
+        with open(filename, 'wt') as f:
+            f.write(str(svp.shape[1])+"\n")
+            for j in range(svp.shape[1]):
+                f.write("%0.6f%c" % (svp.columns[j]/1000, '\n' if j == svp.shape[1]-1 else ' '))
+            for k in range(svp.shape[0]):
+                for j in range(svp.shape[1]):
+                    f.write("%0.6f%c" % (svp.iloc[k,j], '\n' if j == svp.shape[1]-1 else ' '))
 
     def _readf(self, f, types, dtype=str):
         if type(f) is str:
