@@ -11,7 +11,7 @@
 """Underwater acoustic propagation modeling toolbox.
 
 This toolbox currently uses the Bellhop acoustic propagation model. For this model
-to work, the `acoustic toolbox <http://oalib.hlsresearch.com/AcousticsToolbox/>`_
+to work, the `acoustic toolbox <https://oalib-acoustics.org/>`_
 must be installed on your computer and `bellhop.exe` should be in your PATH.
 
 .. sidebar:: Sample Jupyter notebook
@@ -69,7 +69,7 @@ def create_env2d(**kv):
     profile be provided as a Nx2 array of (depth, sound speed):
 
     >>> import arlpy.uwapm as pm
-    >>> env = pm.create_env2d(depth=20, soundspeed=[[0,1540], [5,1535], [20,1530]])
+    >>> env = pm.create_env2d(depth=20, soundspeed=[[0,1540], [5,1535], [10,1535], [20,1530]])
 
     The default environment has a constant water depth. A range dependent bathymetry
     can be provided as a Nx2 array of (range, water depth):

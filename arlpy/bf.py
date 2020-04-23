@@ -356,7 +356,7 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     :param fs: sampling rate for array data (Hz)
     :param c: wave propagation speed (m/s)
     :param nfft: STFT window size
-    :param sd: steering distances (m)
+    :param sd: steering delays (s)
     :param f0: carrier frequency (for baseband data) (Hz)
     :param fmin: minimum frequency to integrate (Hz)
     :param fmax: maximum frequency to integrate (Hz)
