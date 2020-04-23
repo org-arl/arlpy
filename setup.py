@@ -5,20 +5,20 @@ with open('README.rst') as f:
 
 setup(
     name='arlpy',
-    version='1.6.1',
+    version='1.7.0',
     description='ARL Python Tools',
     long_description=readme,
     author='Mandar Chitre',
-    author_email='mandar@arl.nus.edu.sg',
+    author_email='mandar@nus.edu.sg',
     url='https://github.com/org-arl/arlpy',
     license='BSD (3-clause)',
     keywords='underwater acoustics signal processing communication',
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
-        'numpy>=1.16.2',
-        'scipy>=1.2.1',
-        'utm>=0.4.2',
-        'pandas>=0.23.4',
-        'bokeh>=1.2.0'
+        'numpy>=1.18.1',
+        'scipy>=1.4.1',
+        'utm>=0.5.0',
+        'pandas>=1.0.1',
+        'bokeh>=1.4.0'
     ]
 )
