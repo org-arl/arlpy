@@ -578,7 +578,14 @@ class _Bellhop:
         }
         fname_base = self._create_env_file(env, taskmap[task][0])
         if self._bellhop(fname_base):
-            results = taskmap[task][1](fname_base)
+            try:
+                results = taskmap[task][1](fname_base)
+            except FileNotFoundError:
+                print('[WARN] Bellhop did not generate expected output file')
+                err = self._check_error(fname_base)
+                if err is not None:
+                    print(err)
+                results = None
         else:
             results = None
         if debug:
@@ -614,18 +621,18 @@ class _Bellhop:
     def _print_array(self, fh, a):
         if _np.size(a) == 1:
             self._print(fh, "1")
-            self._print(fh, "%0.4f /" % (a))
+            self._print(fh, "%0.6f /" % (a))
         else:
             self._print(fh, str(_np.size(a)))
             for j in a:
-                self._print(fh, "%0.4f " % (j), newline=False)
+                self._print(fh, "%0.6f " % (j), newline=False)
             self._print(fh, "/")
 
     def _create_env_file(self, env, taskcode):
         fh, fname = _mkstemp(suffix='.env')
         fname_base = fname[:-4]
         self._print(fh, "'"+env['name']+"'")
-        self._print(fh, "%0.4f" % (env['frequency']))
+        self._print(fh, "%0.6f" % (env['frequency']))
         self._print(fh, "1")
         if env['surface'] is None:
             self._print(fh, "'%cVWT'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
@@ -633,21 +640,21 @@ class _Bellhop:
             self._print(fh, "'%cVWT*'" % ('S' if env['soundspeed_interp'] == spline else 'C'))
             self._create_bty_ati_file(fname_base+'.ati', env['surface'], env['surface_interp'])
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
-        self._print(fh, "1 0.0 %0.4f" % (max_depth))
+        self._print(fh, "1 0.0 %0.6f" % (max_depth))
         svp = env['soundspeed']
         if _np.size(svp) == 1:
-            self._print(fh, "0.0 %0.4f /" % (svp))
-            self._print(fh, "%0.4f %0.4f /" % (max_depth, svp))
+            self._print(fh, "0.0 %0.6f /" % (svp))
+            self._print(fh, "%0.6f %0.6f /" % (max_depth, svp))
         else:
             for j in range(svp.shape[0]):
-                self._print(fh, "%0.4f %0.4f /" % (svp[j,0], svp[j,1]))
+                self._print(fh, "%0.6f %0.6f /" % (svp[j,0], svp[j,1]))
         depth = env['depth']
         if _np.size(depth) == 1:
-            self._print(fh, "'A' %0.4f" % (env['bottom_roughness']))
+            self._print(fh, "'A' %0.6f" % (env['bottom_roughness']))
         else:
-            self._print(fh, "'A*' %0.4f" % (env['bottom_roughness']))
+            self._print(fh, "'A*' %0.6f" % (env['bottom_roughness']))
             self._create_bty_ati_file(fname_base+'.bty', depth, env['depth_interp'])
-        self._print(fh, "%0.4f %0.4f 0.0 %0.4f %0.4f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
+        self._print(fh, "%0.6f %0.6f 0.0 %0.6f %0.6f /" % (max_depth, env['bottom_soundspeed'], env['bottom_density']/1000, env['bottom_absorption']))
         self._print_array(fh, env['tx_depth'])
         self._print_array(fh, env['rx_depth'])
         self._print_array(fh, env['rx_range']/1000)
@@ -657,8 +664,8 @@ class _Bellhop:
             self._print(fh, "'"+taskcode+" *'")
             self._create_sbp_file(fname_base+'.sbp', env['tx_directionality'])
         self._print(fh, "%d" % (env['nbeams']))
-        self._print(fh, "%0.4f %0.4f /" % (env['min_angle'], env['max_angle']))
-        self._print(fh, "0.0 %0.4f %0.4f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
+        self._print(fh, "%0.6f %0.6f /" % (env['min_angle'], env['max_angle']))
+        self._print(fh, "0.0 %0.6f %0.6f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
         _os.close(fh)
         return fname_base
 
@@ -667,13 +674,13 @@ class _Bellhop:
             f.write("'%c'\n" % ('C' if interp == curvilinear else 'L'))
             f.write(str(depth.shape[0])+"\n")
             for j in range(depth.shape[0]):
-                f.write("%0.4f %0.4f\n" % (depth[j,0]/1000, depth[j,1]))
+                f.write("%0.6f %0.6f\n" % (depth[j,0]/1000, depth[j,1]))
 
     def _create_sbp_file(self, filename, dir):
         with open(filename, 'wt') as f:
             f.write(str(dir.shape[0])+"\n")
             for j in range(dir.shape[0]):
-                f.write("%0.4f %0.4f\n" % (dir[j,0], dir[j,1]))
+                f.write("%0.6f %0.6f\n" % (dir[j,0], dir[j,1]))
 
     def _readf(self, f, types, dtype=str):
         if type(f) is str:
@@ -686,6 +693,19 @@ class _Bellhop:
             else:
                 p[j] = dtype(p[j])
         return tuple(p)
+
+    def _check_error(self, fname_base):
+        err = None
+        try:
+            with open(fname_base+'.prt', 'rt') as f:
+                for lno, s in enumerate(f):
+                    if err is not None:
+                        err += '[BELLHOP] ' + s
+                    elif '*** FATAL ERROR ***' in s:
+                        err = '\n[BELLHOP] ' + s
+        except:
+            pass
+        return err
 
     def _load_arrivals(self, fname_base):
         with open(fname_base+'.arr', 'rt') as f:
