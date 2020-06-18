@@ -270,7 +270,7 @@ def capon(x, fc, sd, complex_output=False):
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
         return _np.array([1.0/a[j].conj().dot(_np.linalg.inv(R)).dot(a[j]).real for j in range(a.shape[0])])
 
-def music(x, fc, sd, complex_output=False, **kwargs):
+def music(x, fc, sd, nsignals=1, complex_output=False):
     """Frequency-domain MUSIC beamformer.
 
     The timeseries data must be 2D with narrowband complex timeseries for each sensor in
@@ -285,8 +285,8 @@ def music(x, fc, sd, complex_output=False, **kwargs):
     :param x: narrowband complex timeseries data for multiple sensors (row per sensor)
     :param fc: carrier frequency for the array data (Hz)
     :param sd: steering delays (s)
+    :param nsignals: number of signal eigenvectors (rest are considered noise)
     :param complex_output: True for complex signal, False for beamformed power
-    :param nsignals (keyword argument): Number of signal eigenvectors (rest are considered noise)
     :returns: beamformer output averaged across time
 
     >>> from arlpy import bf
@@ -303,10 +303,6 @@ def music(x, fc, sd, complex_output=False, **kwargs):
         a = _np.ones_like(sd)
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
-    if 'nsignals' in kwargs:
-        nsignals = kwargs['nsignals']
-    else:
-        nsignals = 1
     if complex_output:
         R = covariance(x)
         if _np.linalg.cond(R) > 10000:
@@ -370,7 +366,7 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     >>> # sensor positions assumed to be in pos
     >>> sd = bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> y = bf.broadband(x, fs, 256, sd, beamformer=capon)
-    >>> y1 = bf.music(x, fs, 256, sd, beamformer=music, n_signals=1)
+    >>> y1 = bf.music(x, fs, 256, sd, beamformer=music, nsignals=1)
     """
     if nfft/fs < (_np.max(sd)-_np.min(sd)):
         raise ValueError('nfft too small for this array')
