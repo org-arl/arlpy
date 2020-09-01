@@ -135,9 +135,9 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45962)
 
     def test_bubble_surface_loss(self):
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(3, 10000, 0)), -1.44, precision=2)
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(6, 10000, 0)), -53)
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 10000, 0.785)), -166)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(15, 20000, 1.396)), -6.5, precision=1)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 20000, 1.396)), -3.4, precision=1)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(5, 20000, 1.396)), -0.5, precision=1)
 
     def test_bubble_soundspeed(self):
         self.assertApproxEqual(uwa.bubble_soundspeed(0, 1500), 1500)
@@ -277,7 +277,7 @@ class SignalTestSuite(MyTestCase):
         x += np.random.normal(0, 0.1, nsamp)
         ind_imp, _ = signal.detect_impulses(x, fs=100000, k=10, tdist=1e-3)
         self.assertArrayEqual(true_ind_imp, ind_imp)
-        
+
 class CommsTestSuite(MyTestCase):
 
     def test_random_data(self):
