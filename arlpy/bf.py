@@ -126,7 +126,7 @@ def delay_and_sum(x, fs, sd, shading=None):
     >>> import numpy as np
     >>> # timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.delay_and_sum(x, 1000, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.delay_and_sum(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
@@ -176,7 +176,7 @@ def bartlett(x, fc, sd, shading=None, complex_output=False):
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.bartlett(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.bartlett(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
@@ -208,7 +208,7 @@ def bartlett_beampattern(i, fc, sd, shading=None, theta=None, show=False):
 
     >>> from arlpy import bf
     >>> import numpy as np
-    >>> sd = bf.steering(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+    >>> sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> bp = bf.bartlett_beampattern(90, 1500, sd, show=True)
     """
     a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
@@ -247,7 +247,7 @@ def capon(x, fc, sd, complex_output=False):
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.capon(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.capon(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
@@ -293,7 +293,7 @@ def music(x, fc, sd, nsignals=1, complex_output=False):
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.music(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.music(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
@@ -364,7 +364,7 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     >>> from arlpy import bf
     >>> # passband timeseries array data assumed to be loaded in x, sampled at fs
     >>> # sensor positions assumed to be in pos
-    >>> sd = bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+    >>> sd = bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> y = bf.broadband(x, fs, 256, sd, beamformer=capon)
     >>> y1 = bf.music(x, fs, 256, sd, beamformer=music, nsignals=1)
     """
