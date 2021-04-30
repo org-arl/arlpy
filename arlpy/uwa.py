@@ -167,20 +167,23 @@ def doppler(speed, frequency, c=soundspeed()):
     """
     return (1+speed/float(c))*frequency
 
-def bubble_resonance(radius, depth=0):
-    """Get the resonant frequency of a bubble of a given radius.
-
-    The bubble resonance is computed based on Medwin & Clay (1998).
-
-    :param radius: radius of the bubble in m
-    :param depth: depth in m
-    :returns: resonant frequency of the bubble in Hz
+def bubble_resonance(radius, depth=0.0, gamma = 1.4, p0 = 1.013e5, rho_water = 1022.476):
+    """Compute resonance frequency of a freely oscillating has bubble in water, given:
+- bubble `radius` in meters
+- `depth` of bubble in water in meters
+- gamma : gas ratio of specific heats. Default 1.4 for air
+- p0: atmospheric pressure. Default 1.013e5 Pa
+- rho_water: Density of water. Default 1022.476 kg/m³
+This ignores surface-tension, thermal, viscous and acoustic damping effects, and the pressure-volume relationship is taken to be adiabatic.
+Implementation based on Medwin & Clay (1998).
 
     >>> import arlpy
     >>> arlpy.uwa.bubble_resonance(100e-6)
-    32500.0
+    32465.56
     """
-    return 3.25/radius * _np.sqrt(1+0.1*depth)
+    g = 9.80665 #acceleration due to gravity
+    p_air = p0 + rho_water*g*depth
+    return 1/(2*np.pi*radius)* np.sqrt(3*gamma*p_air/rho_water)
 
 def bubble_surface_loss(windspeed, frequency, angle):
     """Get the surface loss due to bubbles.
@@ -226,21 +229,21 @@ def bubble_soundspeed(void_fraction, c=soundspeed(), c_gas=340, relative_density
 
 def pressure(x, sensitivity, gain, volt_params=None):
     """Convert the real signal x to an acoustic pressure signal in micropascal.
-    
+
     :param x: real signal in voltage or bit depth (number of bits)
     :param sensitivity: receiving sensitivity in dB re 1V per micropascal
     :param gain: preamplifier gain in dB
-    :param volt_params: (nbits, v_ref) is used to convert the number of bits 
-        to voltage where nbits is the number of bits of each sample and v_ref 
-        is the reference voltage, default to None  
+    :param volt_params: (nbits, v_ref) is used to convert the number of bits
+        to voltage where nbits is the number of bits of each sample and v_ref
+        is the reference voltage, default to None
     :returns: acoustic pressure signal in micropascal
-    
-    If `volt_params` is provided, the sample unit of x is in number of bits,
-    else is in voltage.  
 
-    >>> import arlpy 
+    If `volt_params` is provided, the sample unit of x is in number of bits,
+    else is in voltage.
+
+    >>> import arlpy
     >>> nbits = 16
-    >>> V_ref = 1.0 
+    >>> V_ref = 1.0
     >>> x_volt = V_ref*signal.cw(64, 1, 512)
     >>> x_bit = x_volt*(2**(nbits-1))
     >>> sensitivity = 0
@@ -251,17 +254,17 @@ def pressure(x, sensitivity, gain, volt_params=None):
     nu = 10**(sensitivity/20)
     G = 10**(gain/20)
     if volt_params is not None:
-        nbits, v_ref = volt_params   
+        nbits, v_ref = volt_params
         x = x*v_ref/(2**(nbits-1))
     return x/(nu*G)
 
 def spl(x, ref=1):
     """Get Sound Pressure Level (SPL) of the acoustic pressure signal x.
-    
+
     :param x: acoustic pressure signal in micropascal
     :param ref: reference acoustic pressure in micropascal, default to 1
     :returns: average SPL in dB re micropascal
-    
+
     In water, the common reference is 1 micropascal. In air, the common
     reference is 20 micropascal.
 
