@@ -130,9 +130,9 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.doppler(-10, 50000), 49675)
 
     def test_bubble_resonance(self):
-        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32500)
-        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101562)
-        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45962)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32465.562964469198)
+        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101454.88426396625)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45796.45437634176)
 
     def test_bubble_surface_loss(self):
         self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(3, 10000, 0)), -1.44, precision=2)
@@ -277,7 +277,7 @@ class SignalTestSuite(MyTestCase):
         x += np.random.normal(0, 0.1, nsamp)
         ind_imp, _ = signal.detect_impulses(x, fs=100000, k=10, tdist=1e-3)
         self.assertArrayEqual(true_ind_imp, ind_imp)
-        
+
 class CommsTestSuite(MyTestCase):
 
     def test_random_data(self):
