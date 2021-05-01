@@ -183,7 +183,7 @@ Implementation based on Medwin & Clay (1998).
     """
     g = 9.80665 #acceleration due to gravity
     p_air = p0 + rho_water*g*depth
-    return 1/(2*np.pi*radius)* np.sqrt(3*gamma*p_air/rho_water)
+    return 1/(2*_np.pi*radius)*_np.sqrt(3*gamma*p_air/rho_water)
 
 def bubble_surface_loss(windspeed, frequency, angle):
     """Get the surface loss due to bubbles.
