@@ -168,14 +168,16 @@ def doppler(speed, frequency, c=soundspeed()):
     return (1+speed/float(c))*frequency
 
 def bubble_resonance(radius, depth=0.0, gamma = 1.4, p0 = 1.013e5, rho_water = 1022.476):
-    """Compute resonance frequency of a freely oscillating has bubble in water, given:
-- bubble `radius` in meters
-- `depth` of bubble in water in meters
-- gamma : gas ratio of specific heats. Default 1.4 for air
-- p0: atmospheric pressure. Default 1.013e5 Pa
-- rho_water: Density of water. Default 1022.476 kg/m³
-This ignores surface-tension, thermal, viscous and acoustic damping effects, and the pressure-volume relationship is taken to be adiabatic.
-Implementation based on Medwin & Clay (1998).
+    """Compute resonance frequency of a freely oscillating has bubble in water,
+    using implementation based on Medwin & Clay (1998). This ignores surface-tension,
+    thermal, viscous and acoustic damping effects, and the pressure-volume relationship
+    is taken to be adiabatic. Parameters:
+
+    :radius: bubble `radius` in meters
+    :depth: depth of bubble in water in meters
+    :gamma: gas ratio of specific heats. Default 1.4 for air
+    :p0: atmospheric pressure. Default 1.013e5 Pa
+    :rho_water: Density of water. Default 1022.476 kg/m³
 
     >>> import arlpy
     >>> arlpy.uwa.bubble_resonance(100e-6)
