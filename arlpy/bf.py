@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2016-2019, Mandar Chitre
+# Copyright (c) 2016-2021, Mandar Chitre
 #
 # This file is part of arlpy which is released under Simplified BSD License.
 # See file LICENSE or go to http://www.opensource.org/licenses/BSD-3-Clause
@@ -58,7 +58,7 @@ def stft(x, nfft, overlap=0, window=None):
         raise ValueError('overlap must be in the range [0,nfft)')
     if window is not None:
         x *= _sig.get_window(window, nfft)
-    x = _np.fft.fft(x, axis=-1)
+    x = _np.fft.fft(x, axis=-1) / _np.sqrt(nfft)
     return x
 
 def steering_plane_wave(pos, c, theta):
@@ -131,7 +131,7 @@ def delay_and_sum(x, fs, sd, shading=None):
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if shading is None:
-        s = _np.ones(sd.shape[1])
+        s = _np.ones(sd.shape[1])/_np.sqrt(sd.shape[1])
     else:
         s = _sig.get_window(shading, sd.shape[1])
         s /= _np.sqrt(_np.mean(s**2))
@@ -183,7 +183,7 @@ def bartlett(x, fc, sd, shading=None, complex_output=False):
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
     if shading is not None:
@@ -254,7 +254,7 @@ def capon(x, fc, sd, complex_output=False):
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
     if complex_output:
@@ -300,7 +300,7 @@ def music(x, fc, sd, nsignals=1, complex_output=False):
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
     if complex_output:
@@ -312,24 +312,19 @@ def music(x, fc, sd, nsignals=1, complex_output=False):
         lmbd = A[idx] # Sorted vector of eigenvalues
         B = B[:, idx] # Eigenvectors rearranged accordingly
         En = B[:, nsignals:len(B)] # Noise eigenvectors
-
         V = _np.matmul(En,En.conj().T)#En.conj().dot(En)#
         w = _np.array([V.dot(a[j])/(a[j].conj().dot(V).dot(a[j])) for j in range(a.shape[0])])
         return w.conj().dot(x)
-
     else:
         R = covariance(x)
         if _np.linalg.cond(R) > 10000:
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
-
         A, B = _np.linalg.eigh(R)
         idx = A.argsort()[::-1]
         lmbd = A[idx] # Sorted vector of eigenvalues
         B = B[:, idx] # Eigenvectors rearranged according to eigenvalues
         En = B[:, nsignals:len(B)] # Noise eigenvectors
-
         V = _np.matmul(En,En.conj().T)
-
         return _np.array([1.0/a[j].conj().dot(V).dot(a[j]).real for j in range(a.shape[0])])
 
 def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer=bartlett, **kwargs):
@@ -373,10 +368,9 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft, overlap)
     bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex)
-
     for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft
         if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
-            bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True, **kwargs)
-    return (_np.abs(bfo)**2).sum(axis=-1)
+            bfo[:,:,i] = beamformer(x[:,:,i], f, sd, complex_output=True, **kwargs)
+    return nyq * (_np.abs(bfo)**2).sum(axis=-1)
