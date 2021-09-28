@@ -167,20 +167,25 @@ def doppler(speed, frequency, c=soundspeed()):
     """
     return (1+speed/float(c))*frequency
 
-def bubble_resonance(radius, depth=0):
-    """Get the resonant frequency of a bubble of a given radius.
+def bubble_resonance(radius, depth=0.0, gamma = 1.4, p0 = 1.013e5, rho_water = 1022.476):
+    """Compute resonance frequency of a freely oscillating has bubble in water,
+    using implementation based on Medwin & Clay (1998). This ignores surface-tension,
+    thermal, viscous and acoustic damping effects, and the pressure-volume relationship
+    is taken to be adiabatic. Parameters:
 
-    The bubble resonance is computed based on Medwin & Clay (1998).
-
-    :param radius: radius of the bubble in m
-    :param depth: depth in m
-    :returns: resonant frequency of the bubble in Hz
+    :radius: bubble `radius` in meters
+    :depth: depth of bubble in water in meters
+    :gamma: gas ratio of specific heats. Default 1.4 for air
+    :p0: atmospheric pressure. Default 1.013e5 Pa
+    :rho_water: Density of water. Default 1022.476 kg/m³
 
     >>> import arlpy
     >>> arlpy.uwa.bubble_resonance(100e-6)
-    32500.0
+    32465.56
     """
-    return 3.25/radius * _np.sqrt(1+0.1*depth)
+    g = 9.80665 #acceleration due to gravity
+    p_air = p0 + rho_water*g*depth
+    return 1/(2*_np.pi*radius)*_np.sqrt(3*gamma*p_air/rho_water)
 
 def bubble_surface_loss(windspeed, frequency, angle):
     """Get the surface loss due to bubbles.

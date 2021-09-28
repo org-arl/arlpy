@@ -130,9 +130,9 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.doppler(-10, 50000), 49675)
 
     def test_bubble_resonance(self):
-        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32500)
-        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101562)
-        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45962)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6), 32465.562964469198)
+        self.assertApproxEqual(uwa.bubble_resonance(32e-6), 101454.88426396625)
+        self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45796.45437634176)
 
     def test_bubble_surface_loss(self):
         self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(15, 20000, 1.396)), -6.5, precision=1)

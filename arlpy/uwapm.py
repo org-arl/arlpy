@@ -108,7 +108,8 @@ def create_env2d(**kv):
         'depth_interp': linear,         # curvilinear/linear
         'min_angle': -80,               # deg
         'max_angle': 80,                # deg
-        'nbeams': 0                     # number of beams (0 = auto)
+        'nbeams': 0,                     # number of beams (0 = auto)
+        'stepsize': 0                     # raytrace step size (0 = auto)
     }
     for k, v in kv.items():
         if k not in env.keys():
@@ -695,7 +696,7 @@ class _Bellhop:
             self._create_sbp_file(fname_base+'.sbp', env['tx_directionality'])
         self._print(fh, "%d" % (env['nbeams']))
         self._print(fh, "%0.6f %0.6f /" % (env['min_angle'], env['max_angle']))
-        self._print(fh, "0.0 %0.6f %0.6f" % (1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
+        self._print(fh, "%0.6f %0.6f %0.6f" % (env['stepsize'], 1.01*max_depth, 1.01*_np.max(env['rx_range'])/1000))
         _os.close(fh)
         return fname_base
 
