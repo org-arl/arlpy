@@ -12,6 +12,7 @@
 
 import numpy as _np
 import os as _os
+import sys as _sys
 import warnings as _warnings
 from tempfile import mkstemp as _mkstemp
 import bokeh.plotting as _bplt
@@ -39,7 +40,7 @@ _colors = light_palette
 
 try:
     get_ipython                     # check if we are using IPython
-    _os.environ['JPY_PARENT_PID']   # and Jupyter
+    assert "ipykernel_launcher.py" in _sys.argv[0]   # and Jupyter
     _bplt.output_notebook(resources=_bres.INLINE, hide_banner=True)
     _notebook = True
 except:
