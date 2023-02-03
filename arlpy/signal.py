@@ -36,7 +36,7 @@ def time(n, fs):
     """
     if hasattr(n, "__len__"):
         n = _np.asarray(n).shape[0]
-    return _np.arange(n, dtype=_np.float)/fs
+    return _np.arange(n, dtype=_np.float64)/fs
 
 def cw(fc, duration, fs, window=None, complex_output=False):
     """Generate a sinusoidal pulse.
@@ -183,10 +183,10 @@ def bb2pb(x, fd, fc, fs=None, axis=-1):
     :returns: real passband signal, sampled at `fs`
     """
     if fs is None or fs == fd:
-        y = _np.array(x, dtype=_np.complex)
+        y = _np.array(x, dtype=_np.complex128)
         fs = fd
     else:
-        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex), fs, fd, axis=axis)
+        y = _sig.resample_poly(_np.asarray(x, dtype=_np.complex128), fs, fd, axis=axis)
     osc = _np.sqrt(2)*_np.exp(2j*_np.pi*fc*time(y,fs))
     y *= _utils.broadcastable_to(osc, y.shape, axis)
     return y.real
@@ -297,10 +297,10 @@ def lfilter_gen(b, a):
     >>> x = np.random.normal(0, 1, 1000)              # get some random data
     >>> y = [f.send(v) for v in x]                    # filter data by stepping through it
     """
-    b = _np.asarray(b, dtype=_np.float)
+    b = _np.asarray(b, dtype=_np.float64)
     if not hasattr(a, "__len__") and a == 1:
         a = [1]
-    a = _np.asarray(a, dtype=_np.float)
+    a = _np.asarray(a, dtype=_np.float64)
     if a[0] != 1.0:
         raise ValueError('a[0] must be 1')
     f = _lfilter_gen(b, a)
@@ -424,7 +424,7 @@ def goertzel(f, x, fs=2.0, filter=False):
     n = x.size
     m = f/(fs/n)
     if filter:
-        y = _np.empty(n, dtype=_np.complex)
+        y = _np.empty(n, dtype=_np.complex128)
     w1 = 0
     w2 = 0
     for j in range(n):
@@ -442,8 +442,8 @@ def detect_impulses(x, fs, k=10, tdist=1e-3):
     """Detect impulses in `x`
 
     The minimum height of impulses is defined by `a+k*b`
-    where `a` is median of the envelope of `x` and `b` is median 
-    absolute deviation (MAD) of the envelope of `x`.   
+    where `a` is median of the envelope of `x` and `b` is median
+    absolute deviation (MAD) of the envelope of `x`.
 
     :param x: real signal
     :param fs: sampling frequency in Hz

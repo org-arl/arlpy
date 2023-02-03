@@ -66,7 +66,7 @@ def get_data(filename, channel=None, start=0, length=None, detrend=None):
         f.seek(hdr[0]+start*_framelen, _os.SEEK_SET)
         data = _np.fromfile(f, dtype=_np.dtype('>i2'), count=_channels*length)
     data = _np.reshape(data, [length,_channels])
-    data = _np.take(data, channel, axis=1).astype(_np.float)
+    data = _np.take(data, channel, axis=1).astype(_np.float64)
     if len(channel) == 1:
         data = data.ravel()
     data = data/2048

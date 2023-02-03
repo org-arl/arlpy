@@ -63,7 +63,7 @@ def get_data(filename, channel=None, start=0, length=None, detrend='linear'):
         data = _np.fromfile(f, dtype=_np.uint16, count=_framelen//2*length)
     data = _np.reshape(data, [length,_framelen//2])
     data = data[:,2:]
-    data = _np.take(data, channel, axis=1).astype(_np.float)
+    data = _np.take(data, channel, axis=1).astype(_np.float64)
     if len(channel) == 1:
         data = data.ravel()
     data = 5*data/65536-2.5

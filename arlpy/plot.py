@@ -352,7 +352,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
     >>> arlpy.plot.plot(np.random.normal(size=1000), fs=100, color='green', legend='B')
     """
     global _figure, _color
-    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
+    x = _np.array(x, ndmin=1, dtype=_np.float64, copy=False)
     if y is None:
         y = x
         x = _np.arange(x.size)
@@ -363,7 +363,7 @@ def plot(x, y=None, fs=None, maxpts=10000, pooling=None, color=None, style='soli
         if xlim is None:
             xlim = (x[0], x[-1])
     else:
-        y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
+        y = _np.array(y, ndmin=1, dtype=_np.float64, copy=False)
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
     if color is None:
@@ -433,8 +433,8 @@ def scatter(x, y, marker='.', filled=False, size=6, color=None, title=None, xlab
     global _figure, _color
     if _figure is None:
         _figure = _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, interactive)
-    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
-    y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
+    x = _np.array(x, ndmin=1, dtype=_np.float64, copy=False)
+    y = _np.array(y, ndmin=1, dtype=_np.float64, copy=False)
     if color is None:
         color = _colors[_color % len(_colors)]
         _color += 1
@@ -530,7 +530,7 @@ def vlines(x, color='gray', style='dashed', thickness=1, hold=False):
     global _figure
     if _figure is None:
         return
-    x = _np.array(x, ndmin=1, dtype=_np.float, copy=False)
+    x = _np.array(x, ndmin=1, dtype=_np.float64, copy=False)
     for j in range(x.size):
         _figure.add_layout(_bmodels.Span(location=x[j], dimension='height', line_color=color, line_dash=style, line_width=thickness))
     if not hold and not _hold:
@@ -553,7 +553,7 @@ def hlines(y, color='gray', style='dashed', thickness=1, hold=False):
     global _figure
     if _figure is None:
         return
-    y = _np.array(y, ndmin=1, dtype=_np.float, copy=False)
+    y = _np.array(y, ndmin=1, dtype=_np.float64, copy=False)
     for j in range(y.size):
         _figure.add_layout(_bmodels.Span(location=y[j], dimension='width', line_color=color, line_dash=style, line_width=thickness))
     if not hold and not _hold:
@@ -720,7 +720,7 @@ def iqplot(data, marker='.', color=None, labels=None, filled=False, size=None, t
     >>> arlpy.plot.iqplot(arlpy.comms.qam(16), color='red', marker='x')
     >>> arlpy.plot.iqplot(arlpy.comms.psk(4), labels=['00', '01', '11', '10'])
     """
-    data = _np.asarray(data, dtype=_np.complex)
+    data = _np.asarray(data, dtype=_np.complex128)
     if not _hold:
         figure(title=title, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, interactive=interactive)
     if labels is None:

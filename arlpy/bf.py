@@ -91,8 +91,8 @@ def steering_plane_wave(pos, c, theta):
                 [0.5, 0.5]]
     >>> a2 = bf.steering_plane_wave(pos2, 1500, np.deg2rad(utils.linspace2d(-20, 20, 41, -10, 10, 21)))
     """
-    pos = _np.array(pos, dtype=_np.float)
-    theta = _np.asarray(theta, dtype=_np.float)
+    pos = _np.array(pos, dtype=_np.float64)
+    theta = _np.asarray(theta, dtype=_np.float64)
     if pos.ndim == 1:
         pos -= _np.mean(pos)
         dist = pos[:,_np.newaxis] * _np.sin(theta)
@@ -150,7 +150,7 @@ def covariance(x):
 
     :param x: narrowband complex timeseries data for multiple sensors (row per sensor)
     """
-    cov_mtx = _np.zeros((x.shape[0], x.shape[0]), dtype=_np.complex)
+    cov_mtx = _np.zeros((x.shape[0], x.shape[0]), dtype=_np.complex128)
     for j in range(x.shape[1]):
         cov_mtx += _np.outer(x[:,j], x[:,j].conj())
     cov_mtx /= x.shape[1]
@@ -367,7 +367,7 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
         raise ValueError('nfft too small for this array')
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft, overlap)
-    bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex)
+    bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex128)
     for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft

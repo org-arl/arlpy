@@ -61,8 +61,8 @@ def linspace2d(start0, stop0, num0, start1, stop1, num1):
      [ 1. ,  0.5],
      [ 1. ,  1. ]]
     """
-    x = _np.linspace(start0, stop0, num0, dtype=_np.float)
-    y = _np.linspace(start1, stop1, num1, dtype=_np.float)
+    x = _np.linspace(start0, stop0, num0, dtype=_np.float64)
+    y = _np.linspace(start1, stop1, num1, dtype=_np.float64)
     return _np.array(_np.meshgrid(x, y)).T.reshape(-1, 2)
 
 def linspace3d(start0, stop0, num0, start1, stop1, num1, start2, stop2, num2):
@@ -87,9 +87,9 @@ def linspace3d(start0, stop0, num0, start1, stop1, num1, start2, stop2, num2):
      [ 1. ,  0.5, 0. ],
      [ 1. ,  1. , 0. ]]
     """
-    x = _np.linspace(start0, stop0, num0, dtype=_np.float)
-    y = _np.linspace(start1, stop1, num1, dtype=_np.float)
-    z = _np.linspace(start2, stop2, num2, dtype=_np.float)
+    x = _np.linspace(start0, stop0, num0, dtype=_np.float64)
+    y = _np.linspace(start1, stop1, num1, dtype=_np.float64)
+    z = _np.linspace(start2, stop2, num2, dtype=_np.float64)
     return _np.array(_np.meshgrid(x, y, z)).T.reshape(-1, 3)
 
 def rotation_matrix(alpha, beta, gamma):

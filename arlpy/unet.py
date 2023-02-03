@@ -79,10 +79,10 @@ def get_signal(signals, n, order='F'):
         if lno == desired_lno:
             x = _b64.standard_b64decode(s)
             if signals.baseband[n]:
-                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex)
+                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex128)
                 x = x[0::2] + 1j*x[1::2]
             else:
-                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float)
+                x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float64)
             ch = signals.channels[n]
             if x.size != signals.len[n]*ch:
                 _warn('Incorrect signal length')
@@ -150,10 +150,10 @@ def read_signals(filename, callback, filter=None, order='F'):
             try:
                 x = _b64.standard_b64decode(s)
                 if bb:
-                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex)
+                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.complex128)
                     x = x[0::2] + 1j*x[1::2]
                 else:
-                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float)
+                    x = _np.array(_struct.unpack('>{0}f'.format(len(x)//4), x), dtype=_np.float64)
                 if x.size != hdr['len']*ch:
                     _warn('Incorrect signal length: '+filename+':'+str(lno))
                 if ch > 1:

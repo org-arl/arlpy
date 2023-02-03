@@ -113,7 +113,7 @@ def create_env2d(**kv):
     for k, v in kv.items():
         if k not in env.keys():
             raise KeyError('Unknown key: '+k)
-        env[k] = _np.asarray(v, dtype=_np.float) if not isinstance(v, _pd.DataFrame) and _np.size(v) > 1 else v
+        env[k] = _np.asarray(v, dtype=_np.float64) if not isinstance(v, _pd.DataFrame) and _np.size(v) > 1 else v
     env = check_env2d(env)
     return env
 
@@ -420,7 +420,7 @@ def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
     """
     t0 = 0 if abs_time else min(arrivals.time_of_arrival)
     irlen = int(_np.ceil((max(arrivals.time_of_arrival)-t0)*fs))+1
-    ir = _np.zeros(irlen, dtype=_np.complex)
+    ir = _np.zeros(irlen, dtype=_np.complex128)
     for _, row in arrivals.iterrows():
         ndx = int(_np.round((row.time_of_arrival.real-t0)*fs))
         ir[ndx] = row.arrival_amplitude
@@ -836,7 +836,7 @@ class _Bellhop:
             pos_r_depth = _unpack('f'*nrd, f.read(4*nrd))
             f.seek(36*recl, 0)
             pos_r_range = _unpack('f'*nrr, f.read(4*nrr))
-            pressure = _np.zeros((nrd, nrr), dtype=_np.complex)
+            pressure = _np.zeros((nrd, nrr), dtype=_np.complex128)
             for ird in range(nrd):
                 recnum = 10 + ird
                 f.seek(recnum*4*recl, 0)

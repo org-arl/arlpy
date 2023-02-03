@@ -131,7 +131,7 @@ def ook():
     >>> arlpy.comms.ook()
     array([0, 1.414])
     """
-    return _np.array([0, _sqrt(2)], dtype=_np.float)
+    return _np.array([0, _sqrt(2)], dtype=_np.float64)
 
 def pam(m=2, gray=True, centered=True):
     """Generate a PAM constellation with m signal points.
@@ -152,7 +152,7 @@ def pam(m=2, gray=True, centered=True):
     """
     if gray and 2**int(_np.log2(m)) != m:
         raise ValueError('m must be a power of 2 if Gray coding is desired')
-    x = _np.arange(m, dtype=_np.float)
+    x = _np.arange(m, dtype=_np.float64)
     if centered:
         x -= _np.mean(x)
     x /= _sqrt(_np.mean(x**2))
@@ -201,7 +201,7 @@ def qam(m=16, gray=True):
     n = int(_sqrt(m))
     if n*n != m:
         raise ValueError('m must be an integer squared')
-    x = _np.empty((n, n), dtype=_np.complex)
+    x = _np.empty((n, n), dtype=_np.complex128)
     for r in range(n):
         for i in range(n):
             x[r,i] = r + 1j*i
@@ -241,7 +241,7 @@ def fsk(m=2, n=None):
     if n < m:
         raise ValueError('n must be >= m')
     f = _np.linspace(-1.0, 1.0, m) * (0.5-0.5/m)
-    x = _np.empty((m, n), dtype=_np.complex)
+    x = _np.empty((m, n), dtype=_np.complex128)
     for i in range(m):
         x[i] = _np.exp(-2j*_pi*f[i]*_np.arange(n))
     return x
@@ -372,7 +372,7 @@ def awgn(x, snr, measured=False, complex=None):
     signal = _np.std(x) if measured else 1.0
     noise = signal * _np.power(10, -snr/20.0)
     if complex is None:
-        complex = (x.dtype == _np.complex)
+        complex = (x.dtype == _np.complex128)
     if complex:
         noise /= _sqrt(2)
         y = x + _np.random.normal(0, noise, _np.shape(x)) + 1j*_np.random.normal(0, noise, _np.shape(x))
@@ -442,7 +442,7 @@ def rcosfir(beta, sps, span=None):
         # since this recommendation is for root raised cosine filter, it is conservative for a raised cosine filter
         span = 33-int(44*beta) if beta < 0.68 else 4
     delay = int(span*sps/2)
-    t = _np.arange(-delay, delay+1, dtype=_np.float)/sps
+    t = _np.arange(-delay, delay+1, dtype=_np.float64)/sps
     denom = 1 - (2*beta*t)**2
     eps = _np.finfo(float).eps
     idx1 = _np.nonzero(_np.abs(denom) > _sqrt(eps))
@@ -469,7 +469,7 @@ def rrcosfir(beta, sps, span=None):
         # from http://www.commsys.isy.liu.se/TSKS04/lectures/3/MichaelZoltowski_SquareRootRaisedCosine.pdf
         span = 33-int(44*beta) if beta < 0.68 else 4
     delay = int(span*sps/2)
-    t = _np.arange(-delay, delay+1, dtype=_np.float)/sps
+    t = _np.arange(-delay, delay+1, dtype=_np.float64)/sps
     b = _np.empty_like(t)
     b[delay] = -1/(_pi*sps) * (_pi*(beta-1)-4*beta)
     eps = _np.finfo(float).eps
@@ -510,7 +510,7 @@ def upconvert(x, sps, fc, fs=2.0, g=None):
     >>> bb = arlpy.comms.modulate(arlpy.comms.random_data(100), arlpy.comms.psk())
     >>> pb = arlpy.comms.upconvert(bb, 6, 27000, 108000, rrc)
     """
-    x = _np.asarray(x, dtype=_np.complex)
+    x = _np.asarray(x, dtype=_np.complex128)
     if g is None:
         y = _np.repeat(x, sps)/_np.sqrt(sps)
     else:
@@ -553,7 +553,7 @@ def downconvert(x, sps, fc, fs=2.0, g=None):
     0.0
     """
     if fc == 0:
-        y = _np.asarray(x, dtype=_np.complex)
+        y = _np.asarray(x, dtype=_np.complex128)
     else:
         y = _sp.hilbert(x)/2
         y *= _sqrt(2)*_np.exp(-2j*_pi*fc*_time(y, fs))
