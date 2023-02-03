@@ -17,7 +17,7 @@ from arlpy.signal import time as _time
 
 # set up population count table for fast BER computation
 _MAX_M = 64
-_popcount = _np.empty(_MAX_M, dtype=_np.int)
+_popcount = _np.empty(_MAX_M, dtype=_np.int64)
 for _i in range(_MAX_M):
     _popcount[_i] = bin(_i).count('1')
 
@@ -87,12 +87,12 @@ def bi2sym(x, m):
     n = int(_np.log2(m))
     if 2**n != m:
         raise ValueError('m must be a power of 2')
-    x = _np.asarray(x, dtype=_np.int)
+    x = _np.asarray(x, dtype=_np.int64)
     if _np.any(x < 0) or _np.any(x > 1):
         raise ValueError('Invalid data bits')
     nsym = int(len(x)/n)
     x = _np.reshape(x, (nsym, n))
-    y = _np.zeros(nsym, dtype=_np.int)
+    y = _np.zeros(nsym, dtype=_np.int64)
     for i in range(n):
         y <<= 1
         y |= x[:, i]
@@ -112,10 +112,10 @@ def sym2bi(x, m):
     n = int(_np.log2(m))
     if 2**n != m:
         raise ValueError('m must be a power of 2')
-    x = _np.asarray(x, dtype=_np.int)
+    x = _np.asarray(x, dtype=_np.int64)
     if _np.any(x < 0) or _np.any(x >= m):
         raise ValueError('Invalid data for specified m')
-    y = _np.zeros((len(x), n), dtype=_np.int)
+    y = _np.zeros((len(x), n), dtype=_np.int64)
     for i in range(n):
         y[:, n-i-1] = (x >> i) & 1
     return _np.ravel(y)
@@ -258,7 +258,7 @@ def modulate(data, const):
     >>> import arlpy
     >>> x = arlpy.comms.modulate(arlpy.comms.random_data(100), arlpy.comms.psk())
     """
-    data = _np.asarray(data, dtype=_np.int)
+    data = _np.asarray(data, dtype=_np.int64)
     const = _np.asarray(const)
     return _np.ravel(const[data])
 
@@ -391,8 +391,8 @@ def ser(x, y):
     >>> arlpy.comms.ser([0,1,2,3], [0,1,2,2])
     0.25
     """
-    x = _np.asarray(x, dtype=_np.int)
-    y = _np.asarray(y, dtype=_np.int)
+    x = _np.asarray(x, dtype=_np.int64)
+    y = _np.asarray(y, dtype=_np.int64)
     n = _np.product(_np.shape(x))
     e = _np.count_nonzero(x^y)
     return float(e)/n
@@ -409,8 +409,8 @@ def ber(x, y, m=2):
     >>> arlpy.comms.ber([0,1,2,3], [0,1,2,2], m=4)
     0.125
     """
-    x = _np.asarray(x, dtype=_np.int)
-    y = _np.asarray(y, dtype=_np.int)
+    x = _np.asarray(x, dtype=_np.int64)
+    y = _np.asarray(y, dtype=_np.int64)
     if _np.any(x >= m) or _np.any(y >= m) or _np.any(x < 0) or _np.any(y < 0):
         raise ValueError('Invalid data for specified m')
     if m == 2:
