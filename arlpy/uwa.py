@@ -205,10 +205,11 @@ def bubble_surface_loss(windspeed, frequency, angle):
     -117.6
     """
     beta = _np.pi/2-angle
+    f = frequency/1000.0
     if windspeed >= 6:
-        a = 1.26e-3/_np.sin(beta) * windspeed**1.57 * frequency**0.85
+        a = 1.26e-3/_np.sin(beta) * windspeed**1.57 * f**0.85
     else:
-        a = 1.26e-3/_np.sin(beta) * 6**1.57 * frequency**0.85 * _np.exp(1.2*(windspeed-6))
+        a = 1.26e-3/_np.sin(beta) * 6**1.57 * f**0.85 * _np.exp(1.2*(windspeed-6))
     return 10**(-a/20.0)
 
 def bubble_soundspeed(void_fraction, c=soundspeed(), c_gas=340, relative_density=1000):

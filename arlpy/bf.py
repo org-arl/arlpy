@@ -1,6 +1,6 @@
 ##############################################################################
 #
-# Copyright (c) 2016-2019, Mandar Chitre
+# Copyright (c) 2016-2021, Mandar Chitre
 #
 # This file is part of arlpy which is released under Simplified BSD License.
 # See file LICENSE or go to http://www.opensource.org/licenses/BSD-3-Clause
@@ -58,7 +58,7 @@ def stft(x, nfft, overlap=0, window=None):
         raise ValueError('overlap must be in the range [0,nfft)')
     if window is not None:
         x *= _sig.get_window(window, nfft)
-    x = _np.fft.fft(x, axis=-1)
+    x = _np.fft.fft(x, axis=-1) / _np.sqrt(nfft)
     return x
 
 def steering_plane_wave(pos, c, theta):
@@ -126,12 +126,12 @@ def delay_and_sum(x, fs, sd, shading=None):
     >>> import numpy as np
     >>> # timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.delay_and_sum(x, 1000, bf.steering(pos, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.delay_and_sum(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if shading is None:
-        s = _np.ones(sd.shape[1])
+        s = _np.ones(sd.shape[1])/_np.sqrt(sd.shape[1])
     else:
         s = _sig.get_window(shading, sd.shape[1])
         s /= _np.sqrt(_np.mean(s**2))
@@ -176,14 +176,14 @@ def bartlett(x, fc, sd, shading=None, complex_output=False):
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.bartlett(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.bartlett(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
     if shading is not None:
@@ -208,7 +208,7 @@ def bartlett_beampattern(i, fc, sd, shading=None, theta=None, show=False):
 
     >>> from arlpy import bf
     >>> import numpy as np
-    >>> sd = bf.steering(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+    >>> sd = bf.steering_plane_wave(np.linspace(0, 5, 11), 1500, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> bp = bf.bartlett_beampattern(90, 1500, sd, show=True)
     """
     a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
@@ -247,14 +247,14 @@ def capon(x, fc, sd, complex_output=False):
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.capon(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.capon(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
     if complex_output:
@@ -270,7 +270,7 @@ def capon(x, fc, sd, complex_output=False):
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
         return _np.array([1.0/a[j].conj().dot(_np.linalg.inv(R)).dot(a[j]).real for j in range(a.shape[0])])
 
-def music(x, fc, sd, complex_output=False, **kwargs):
+def music(x, fc, sd, nsignals=1, complex_output=False):
     """Frequency-domain MUSIC beamformer.
 
     The timeseries data must be 2D with narrowband complex timeseries for each sensor in
@@ -285,28 +285,24 @@ def music(x, fc, sd, complex_output=False, **kwargs):
     :param x: narrowband complex timeseries data for multiple sensors (row per sensor)
     :param fc: carrier frequency for the array data (Hz)
     :param sd: steering delays (s)
+    :param nsignals: number of signal eigenvectors (rest are considered noise)
     :param complex_output: True for complex signal, False for beamformed power
-    :param nsignals (keyword argument): Number of signal eigenvectors (rest are considered noise)
     :returns: beamformer output averaged across time
 
     >>> from arlpy import bf
     >>> import numpy as np
     >>> # narrowband (1 kHz) timeseries array data assumed to be loaded in x
     >>> # sensor positions assumed to be in pos
-    >>> y = bf.music(x, 1000, bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
+    >>> y = bf.music(x, 1000, bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181)))
     """
     if x.ndim == 1:
         x = x[:,_np.newaxis]
     if x.shape[0] != sd.shape[1]:
         raise ValueError('Sensor count mismatch in data and steering vector')
     if fc == 0:
-        a = _np.ones_like(sd)
+        a = _np.ones_like(sd)/_np.sqrt(sd.shape[1])
     else:
         a = _np.exp(-2j*_np.pi*fc*sd)/_np.sqrt(sd.shape[1])
-    if 'nsignals' in kwargs:
-        nsignals = kwargs['nsignals']
-    else:
-        nsignals = 1
     if complex_output:
         R = covariance(x)
         if _np.linalg.cond(R) > 10000:
@@ -316,24 +312,19 @@ def music(x, fc, sd, complex_output=False, **kwargs):
         lmbd = A[idx] # Sorted vector of eigenvalues
         B = B[:, idx] # Eigenvectors rearranged accordingly
         En = B[:, nsignals:len(B)] # Noise eigenvectors
-
         V = _np.matmul(En,En.conj().T)#En.conj().dot(En)#
         w = _np.array([V.dot(a[j])/(a[j].conj().dot(V).dot(a[j])) for j in range(a.shape[0])])
         return w.conj().dot(x)
-
     else:
         R = covariance(x)
         if _np.linalg.cond(R) > 10000:
             R += _np.random.normal(0, _np.max(_np.abs(R))/1000000, R.shape)
-
         A, B = _np.linalg.eigh(R)
         idx = A.argsort()[::-1]
         lmbd = A[idx] # Sorted vector of eigenvalues
         B = B[:, idx] # Eigenvectors rearranged according to eigenvalues
         En = B[:, nsignals:len(B)] # Noise eigenvectors
-
         V = _np.matmul(En,En.conj().T)
-
         return _np.array([1.0/a[j].conj().dot(V).dot(a[j]).real for j in range(a.shape[0])])
 
 def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer=bartlett, **kwargs):
@@ -368,19 +359,18 @@ def broadband(x, fs, nfft, sd, f0=0, fmin=None, fmax=None, overlap=0, beamformer
     >>> from arlpy import bf
     >>> # passband timeseries array data assumed to be loaded in x, sampled at fs
     >>> # sensor positions assumed to be in pos
-    >>> sd = bf.steering(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181))
+    >>> sd = bf.steering_plane_wave(pos, 1500, np.linspace(-np.pi/2, np.pi/2, 181))
     >>> y = bf.broadband(x, fs, 256, sd, beamformer=capon)
-    >>> y1 = bf.music(x, fs, 256, sd, beamformer=music, n_signals=1)
+    >>> y1 = bf.music(x, fs, 256, sd, beamformer=music, nsignals=1)
     """
     if nfft/fs < (_np.max(sd)-_np.min(sd)):
         raise ValueError('nfft too small for this array')
     nyq = 2 if f0 == 0 and _np.sum(_np.abs(x.imag)) == 0 else 1
     x = stft(x, nfft, overlap)
     bfo = _np.zeros((sd.shape[0], x.shape[1], nfft//nyq), dtype=_np.complex)
-
     for i in range(nfft//nyq):
         f = i if i < nfft/2 else i-nfft
         f = f0 + f*float(fs)/nfft
         if (fmin is None or f >= fmin) and (fmax is None or f <= fmax):
-            bfo[:,:,i] = nyq*beamformer(x[:,:,i], f, sd, complex_output=True, **kwargs)
-    return (_np.abs(bfo)**2).sum(axis=-1)
+            bfo[:,:,i] = beamformer(x[:,:,i], f, sd, complex_output=True, **kwargs)
+    return nyq * (_np.abs(bfo)**2).sum(axis=-1)

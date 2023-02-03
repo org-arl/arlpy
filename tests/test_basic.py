@@ -135,9 +135,9 @@ class UwaTestSuite(MyTestCase):
         self.assertApproxEqual(uwa.bubble_resonance(100e-6, depth=10), 45796.45437634176)
 
     def test_bubble_surface_loss(self):
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(3, 10000, 0)), -1.44, precision=2)
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(6, 10000, 0)), -53)
-        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 10000, 0.785)), -166)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(15, 20000, 1.396)), -6.5, precision=1)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(10, 20000, 1.396)), -3.4, precision=1)
+        self.assertApproxEqual(utils.mag2db(uwa.bubble_surface_loss(5, 20000, 1.396)), -0.5, precision=1)
 
     def test_bubble_soundspeed(self):
         self.assertApproxEqual(uwa.bubble_soundspeed(0, 1500), 1500)
@@ -456,16 +456,16 @@ class BeamformerTestSuite(MyTestCase):
         x = np.ones((5, 1024))
         y = bf.stft(x, 64)
         self.assertEqual(y.shape, (5, 16, 64))
-        self.assertArrayEqual(y[:,:,0], 64*np.ones((5, 16)))
+        self.assertArrayEqual(y[:,:,0], np.sqrt(64)*np.ones((5, 16)))
         self.assertArrayEqual(y[:,:,1:], np.zeros((5, 16, 63)))
         y = bf.stft(x, 64, 32)
         self.assertEqual(y.shape, (5, 31, 64))
-        self.assertArrayEqual(y[:,:,0], 64*np.ones((5, 31)))
+        self.assertArrayEqual(y[:,:,0], np.sqrt(64)*np.ones((5, 31)))
         self.assertArrayEqual(y[:,:,1:], np.zeros((5, 31, 63)))
         y = bf.stft(x, 64, window='hanning')
         self.assertEqual(y.shape, (5, 16, 64))
-        self.assertArrayEqual(y[:,:,0], 32*np.ones((5, 16)), precision=0)
-        self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hanning', 64)))
+        self.assertArrayEqual(y[:,:,0], np.sqrt(16)*np.ones((5, 16)), precision=0)
+        self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hanning', 64))/np.sqrt(64))
 
     def test_steering_plane_wave(self):
         x = bf.steering_plane_wave(np.linspace(0, 5, 11), 1, 0)
