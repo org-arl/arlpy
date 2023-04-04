@@ -625,7 +625,11 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            _proc.call(['bellhop.exe'] + list(args), stdout=_proc.STDERR, stderr=_proc.STDERR)
+            print( f'Running Bellhop...', file=sys.stderr )
+            # the right way to call it is: _proc.run( [ 'bellhop.exe' ] + list( args ), capture_output=True )
+            # but it is not backward-compatible with python 3.6, which still is in use on many systems
+            output = _proc.run( [ 'bellhop.exe' ] + list( args ), stderr=_proc.PIPE ) # _proc.call(['bellhop.exe'] + list(args), stderr=_proc.STDOUT)
+            sys.stderr.buffer.write( output.stderr )
         except OSError:
             return False
         return True
