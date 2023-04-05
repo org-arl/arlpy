@@ -777,8 +777,7 @@ class _Bellhop:
                     for m in range(rx_range_count):
                         count = int(f.readline())
                         for n in range(count):
-                            dataA = self._readf(f, (float, float, float, float, float))
-                            dataB = self._readf(f, (float, int, int))
+                            data = self._readf(f, (float, float, float, float, float, float, int, int))
                             arrivals.append(_pd.DataFrame({
                                 'tx_depth_ndx': [j],
                                 'rx_depth_ndx': [k],
@@ -787,12 +786,12 @@ class _Bellhop:
                                 'rx_depth': [rx_depth[k]],
                                 'rx_range': [rx_range[m]],
                                 'arrival_number': [n],
-                                'arrival_amplitude': [dataA[0]*_np.exp(1j*dataA[1])],
-                                'time_of_arrival': [dataA[2]],
-                                'angle_of_departure': [dataA[4]],
-                                'angle_of_arrival': [dataB[0]],
-                                'surface_bounces': [dataB[1]],
-                                'bottom_bounces': [dataB[2]]
+                                'arrival_amplitude': [data[0]*_np.exp(1j*data[1])],
+                                'time_of_arrival': [data[2]],
+                                'angle_of_departure': [data[4]],
+                                'angle_of_arrival': [data[5]],
+                                'surface_bounces': [data[6]],
+                                'bottom_bounces': [data[7]]
                             }, index=[len(arrivals)+1]))
         return _pd.concat(arrivals)
 
