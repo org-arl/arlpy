@@ -657,8 +657,10 @@ class _Bellhop:
         self._print(fh, "%0.6f" % (env['frequency']))
         self._print(fh, "1")
         svp = env['soundspeed']
+        svp_depth = 0.0
         svp_interp = 'S' if env['soundspeed_interp'] == spline else 'C'
         if isinstance(svp, _pd.DataFrame):
+            svp_depth = svp.index[-1]
             if len(svp.columns) > 1:
                 svp_interp = 'Q'
             else:
@@ -668,7 +670,8 @@ class _Bellhop:
         else:
             self._print(fh, "'%cVWT*'" % svp_interp)
             self._create_bty_ati_file(fname_base+'.ati', env['surface'], env['surface_interp'])
-        max_depth = env['depth'] if _np.size(env['depth']) == 1 else _np.max(env['depth'][:,1])
+        #max depth should be the depth of the acoustic domain, which can be deeper than the max depth bathymetry
+        max_depth = env['depth'] if _np.size(env['depth']) == 1 else max(_np.max(env['depth'][:,1]), svp_depth)
         self._print(fh, "1 0.0 %0.6f" % (max_depth))
         if _np.size(svp) == 1:
             self._print(fh, "0.0 %0.6f /" % (svp))
