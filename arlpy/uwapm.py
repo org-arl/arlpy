@@ -30,7 +30,6 @@ from struct import unpack as _unpack
 from sys import float_info as _fi
 import arlpy.plot as _plt
 import bokeh as _bokeh
-import sys
 
 # constants
 linear = 'linear'
@@ -200,11 +199,11 @@ def print_env(env):
         v = str(env[k])
         if '\n' in v:
             v = v.split('\n')
-            print('%20s : '%(k) + v[0], file=sys.stderr)
+            print('%20s : '%(k) + v[0])
             for v1 in v[1:]:
-                print('%20s   '%('') + v1, file=sys.stderr)
+                print('%20s   '%('') + v1)
         else:
-            print('%20s : '%(k) + v, file=sys.stderr)
+            print('%20s : '%(k) + v)
 
 def plot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='orangered', rx_color='midnightblue', rx_plot=None, **kwargs):
     """Plots a visual representation of the environment.
@@ -322,7 +321,7 @@ def compute_arrivals(env, model=None, debug=False):
     env = check_env2d(env)
     (model_name, model) = _select_model(env, arrivals, model)
     if debug:
-        print('[DEBUG] Model: '+model_name, file=sys.stderr)
+        print('[DEBUG] Model: '+model_name)
     return model.run(env, arrivals, debug)
 
 def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False):
@@ -351,7 +350,7 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
         env['rx_range'] = env['rx_range'][rx_range_ndx]
     (model_name, model) = _select_model(env, eigenrays, model)
     if debug:
-        print('[DEBUG] Model: '+model_name, file=sys.stderr)
+        print('[DEBUG] Model: '+model_name)
     return model.run(env, eigenrays, debug)
 
 def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
@@ -374,7 +373,7 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
     (model_name, model) = _select_model(env, rays, model)
     if debug:
-        print('[DEBUG] Model: '+model_name, file=sys.stderr)
+        print('[DEBUG] Model: '+model_name)
     return model.run(env, rays, debug)
 
 def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, debug=False):
@@ -400,7 +399,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
         env['tx_depth'] = env['tx_depth'][tx_depth_ndx]
     (model_name, model) = _select_model(env, mode, model)
     if debug:
-        print('[DEBUG] Model: '+model_name, file=sys.stderr)
+        print('[DEBUG] Model: '+model_name)
     return model.run(env, mode, debug)
 
 def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
@@ -602,14 +601,14 @@ class _Bellhop:
         if self._bellhop(fname_base):
             err = self._check_error(fname_base)
             if err is not None:
-                print(err, file=sys.stderr)
+                print(err)
             else:
                 try:
                     results = taskmap[task][1](fname_base)
                 except FileNotFoundError:
-                    print('[WARN] Bellhop did not generate expected output file', file=sys.stderr)
+                    print('[WARN] Bellhop did not generate expected output file')
         if debug:
-            print('[DEBUG] Bellhop working files: '+fname_base+'.*', file=sys.stderr)
+            print('[DEBUG] Bellhop working files: '+fname_base+'.*')
         else:
             self._unlink(fname_base+'.env')
             self._unlink(fname_base+'.bty')
@@ -625,11 +624,9 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            print( f'Running Bellhop...', file=sys.stderr )
-            # the right way to call it is: _proc.run( [ 'bellhop.exe' ] + list( args ), capture_output=True )
-            # but it is not backward-compatible with python 3.6, which still is in use on many systems
-            output = _proc.run( [ 'bellhop.exe' ] + list( args ), stderr=_proc.PIPE ) # _proc.call(['bellhop.exe'] + list(args), stderr=_proc.STDOUT)
-            sys.stderr.buffer.write( output.stderr )
+            _proc.run(f'bellhop.exe {" ".join(list(args))}', 
+                      stderr=_proc.STDOUT, stdout=_proc.PIPE,
+                      shell=True)
         except OSError:
             return False
         return True
