@@ -58,7 +58,7 @@ def _new_figure(title, width, height, xlabel, ylabel, xlim, ylim, xtype, ytype, 
         interactive = _interactive
     if interactive:
         tools = 'pan,box_zoom,wheel_zoom,reset,save'
-    f = _bplt.figure(title=title, plot_width=width, plot_height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel, x_axis_type=xtype, y_axis_type=ytype, tools=tools)
+    f = _bplt.figure(title=title, width=width, height=height, x_range=xlim, y_range=ylim, x_axis_label=xlabel, y_axis_label=ylabel, x_axis_type=xtype, y_axis_type=ytype, tools=tools)
     f.toolbar.logo = None
     return f
 
@@ -658,7 +658,7 @@ def specgram(x, fs=2, nfft=None, noverlap=None, colormap='Plasma256', clim=None,
         clim = (_np.max(Sxx)-clim, _np.max(Sxx))
     image(Sxx, x=(t[0], t[-1]), y=(f[0], f[-1]), title=title, colormap=colormap, clim=clim, clabel=clabel, xlabel=xlabel, ylabel=ylabel, xlim=xlim, ylim=ylim, width=width, height=height, hold=hold, interactive=interactive)
 
-def psd(x, fs=2, nfft=512, noverlap=None, window='hanning', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
+def psd(x, fs=2, nfft=512, noverlap=None, window='hann', color=None, style='solid', thickness=1, marker=None, filled=False, size=6, title=None, xlabel='Frequency (Hz)', ylabel='Power spectral density (dB/Hz)', xlim=None, ylim=None, width=None, height=None, legend=None, hold=False, interactive=None):
     """Plot power spectral density of a given time series signal.
 
     :param x: time series signal
