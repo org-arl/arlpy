@@ -166,14 +166,14 @@ class SignalTestSuite(MyTestCase):
         self.assertArrayEqual(signal.time(np.zeros(1000), 500), np.arange(1000)/500.0)
 
     def test_cw(self):
-        self.assertArrayEqual(signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=6)
-        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, complex_output=True), np.exp(2j*np.pi*10000*np.arange(5000, dtype=np.complex)/50000), precision=6)
-        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float)/50000), precision=2)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float64)/50000), precision=6)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, complex_output=True), np.exp(2j*np.pi*10000*np.arange(5000, dtype=np.complex128)/50000), precision=6)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float64)/50000), precision=2)
 
     def test_sweep(self):
-        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000), sp.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000, 'linear'))
-        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, 'hyperbolic'), sp.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000, 'hyperbolic'))
-        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, window=('tukey', 0.1)), sp.tukey(5000, 0.1)*sp.chirp(np.arange(5000, dtype=np.float)/50000, 5000, 0.1, 10000), precision=2)
+        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000), sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000, 'linear'))
+        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, 'hyperbolic'), sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000, 'hyperbolic'))
+        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, window=('tukey', 0.1)), sp.tukey(5000, 0.1)*sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000), precision=2)
 
     def test_envelope(self):
         x = np.random.normal(0, 1, 1000)
@@ -219,12 +219,12 @@ class SignalTestSuite(MyTestCase):
 
     def test_lfilter0(self):
         x = np.random.normal(0, 1, 1000)
-        hb = np.array([0, 0, 1, 0], dtype=np.float)
+        hb = np.array([0, 0, 1, 0], dtype=np.float64)
         self.assertArrayEqual(x, signal.lfilter0(hb, 1, x))
 
     def test_lfilter_gen(self):
         x = np.random.normal(0, 1, 1000)
-        hb = np.array([0, 0, 1, 0], dtype=np.float)
+        hb = np.array([0, 0, 1, 0], dtype=np.float64)
         f = signal.lfilter_gen(hb, 1)
         y = [f.send(v) for v in x]
         self.assertArrayEqual(np.append([0, 0], x[:-2]), y)
@@ -426,8 +426,8 @@ class CommsTestSuite(MyTestCase):
         delay = int((len(z)-len(x))/2)
         d = z[delay:-delay]-x
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -40)
-        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
-        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
+        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float64), precision=1)
+        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float64), precision=1)
 
     def test_updown_rect_conversion(self):
         x = np.random.normal(0, 1, 1024) + 1j*np.random.normal(0, 1, 1024)
@@ -435,13 +435,13 @@ class CommsTestSuite(MyTestCase):
         z = comms.downconvert(y, 16, fc=0.5)
         d = z-x
         self.assertLess(10*np.log10(np.mean(d*np.conj(d))), -10)
-        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float), precision=1)
-        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float), precision=1)
+        self.assertArrayEqual(d.real, np.zeros_like(d, dtype=np.float64), precision=1)
+        self.assertArrayEqual(d.imag, np.zeros_like(d, dtype=np.float64), precision=1)
 
 class BeamformerTestSuite(MyTestCase):
 
     def test_normalize(self):
-        x = np.empty((10, 1024), dtype=np.complex)
+        x = np.empty((10, 1024), dtype=np.complex128)
         for i in range(10):
             x[i,:] = np.random.normal(0, 1, 1024)*2*i - 1j*np.random.normal(0, 1, 1024)*i + i + i*0.5j
         y = bf.normalize(x, unit_variance=False)
@@ -462,10 +462,10 @@ class BeamformerTestSuite(MyTestCase):
         self.assertEqual(y.shape, (5, 31, 64))
         self.assertArrayEqual(y[:,:,0], np.sqrt(64)*np.ones((5, 31)))
         self.assertArrayEqual(y[:,:,1:], np.zeros((5, 31, 63)))
-        y = bf.stft(x, 64, window='hanning')
+        y = bf.stft(x, 64, window='hann')
         self.assertEqual(y.shape, (5, 16, 64))
         self.assertArrayEqual(y[:,:,0], np.sqrt(16)*np.ones((5, 16)), precision=0)
-        self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hanning', 64))/np.sqrt(64))
+        self.assertArrayEqual(y[0,0,:], np.fft.fft(sp.get_window('hann', 64))/np.sqrt(64))
 
     def test_steering_plane_wave(self):
         x = bf.steering_plane_wave(np.linspace(0, 5, 11), 1, 0)
@@ -509,7 +509,7 @@ class BeamformerTestSuite(MyTestCase):
         x = bf.bartlett(np.ones(11), 1500, sd)
         self.assertEqual(x.shape, (181,))
         self.assertEqual(np.argmax(x), 90)
-        x = bf.bartlett(np.ones(11), 1500, sd, shading='hanning')
+        x = bf.bartlett(np.ones(11), 1500, sd, shading='hann')
         self.assertEqual(x.shape, (181,))
         self.assertEqual(np.argmax(x), 90)
         y = np.exp(-2j*np.pi*np.linspace(2.5, -2.5, 11)/np.sqrt(2))   # baseband signal from +45 deg
