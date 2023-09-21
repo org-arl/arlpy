@@ -39,8 +39,7 @@ _static_images = False
 _colors = light_palette
 
 try:
-    get_ipython                     # check if we are using IPython
-    assert "ipykernel_launcher.py" in _sys.argv[0]   # and Jupyter
+    assert 'ZMQInteractiveShell' in get_ipython().__class__.__name__   # check if we are using IPython and Jupyter
     _bplt.output_notebook(resources=_bres.INLINE, hide_banner=True)
     _notebook = True
 except:
