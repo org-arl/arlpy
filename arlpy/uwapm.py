@@ -781,7 +781,6 @@ class _Bellhop:
                         count = int(f.readline())
                         for n in range(count):
                             data = self._readf(f, (float, float, float, float, float, float, int, int))
-                            freq = freq[0] # Extract the float value of frequency from the tuple
                             arrivals.append(_pd.DataFrame({
                                 'tx_depth_ndx': [j],
                                 'rx_depth_ndx': [k],
@@ -791,7 +790,7 @@ class _Bellhop:
                                 'rx_range': [rx_range[m]],
                                 'arrival_number': [n],
                                 # 'arrival_amplitude': [data[0]*_np.exp(1j * data[1]* _np.pi/180)],
-                                'arrival_amplitude': [data[0] * _np.exp( -1j * (_np.deg2rad(data[1]) + freq * 2 * _np.pi * (data[3] * 1j +  data[2])))],
+                                'arrival_amplitude': [data[0] * _np.exp( -1j * (_np.deg2rad(data[1]) + freq[0] * 2 * _np.pi * (data[3] * 1j +  data[2])))],
                                 'time_of_arrival': [data[2]],
                                 'complex_time_of_arrival': [data[2] + 1j*data[3]],
                                 'angle_of_departure': [data[4]],
