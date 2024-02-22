@@ -9,10 +9,11 @@
 ##############################################################################
 
 import unittest
+import os
 import numpy as np
 import scipy.signal as sp
 
-from .context import utils, geo, uwa, signal, comms, bf
+from .context import utils, geo, uwa, uwapm, signal, comms, bf
 
 class MyTestCase(unittest.TestCase):
 
@@ -159,6 +160,15 @@ class UwaTestSuite(MyTestCase):
         p = signal.cw(64, 1, 512)
         self.assertApproxEqual(uwa.spl(p), 20*np.log10(1/np.sqrt(2)))
 
+class UwapmTestSuite(MyTestCase):
+
+    def test_no_models(self):
+        # Remove old PATH so it doesn't conflict with the test.
+        # It will get reset in the next test.
+        os.environ["PATH"] = ""
+
+        self.assertEqual(uwapm.models(), [])
+        
 class SignalTestSuite(MyTestCase):
 
     def test_time(self):
