@@ -624,9 +624,11 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            _proc.run(f'bellhop.exe {" ".join(list(args))}', 
-                      stderr=_proc.STDOUT, stdout=_proc.PIPE,
-                      shell=True)
+            result = _proc.run(f'bellhop.exe {" ".join(list(args))}', 
+                        stderr=_proc.STDOUT, stdout=_proc.PIPE,
+                        shell=True)
+            if result.returncode == 127:
+                return False
         except OSError:
             return False
         return True
