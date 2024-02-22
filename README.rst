@@ -1,6 +1,8 @@
 ARL Python Tools
 ================
 
+[![CI](https://github.com/org-arl/arlpy.jl/workflows/CI/badge.svg)](https://github.com/org-arl/arlpy.jl/actions)
+
 Packages such as `numpy` and `scipy` provide excellent mathematical tools for
 scientists and engineers using Python. However, these packages are still young
 and evolving, and understandably have some gaps, especially when it comes to
