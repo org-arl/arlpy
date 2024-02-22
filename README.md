@@ -55,5 +55,5 @@ for png export. These should be installed manually, if desired.
 
 ## Useful links
 
-* `arlpy home <https://github.com/org-arl/arlpy>`_
-* `arlpy documentation <http://arlpy.readthedocs.io>`_
+* [arlpy home](https://github.com/org-arl/arlpy)
+* [arlpy documentation](http://arlpy.readthedocs.io)
