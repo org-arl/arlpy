@@ -323,7 +323,7 @@ def compute_arrivals(env, model=None, debug=False, fname_base=None):
     (model_name, model) = _select_model(env, arrivals, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
-    return model.run(env, arrivals, debug)
+    return model.run(env, arrivals, debug, fname_base)
 
 def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False, fname_base=None):
     """Compute eigenrays between a given transmitter and receiver.
