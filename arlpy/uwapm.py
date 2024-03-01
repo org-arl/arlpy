@@ -305,12 +305,13 @@ def plot_ssp(env, **kwargs):
     else:
         _plt.plot(svp[:,1], -svp[:,0], xlabel='Soundspeed (m/s)', ylabel='Depth (m)', **kwargs)
 
-def compute_arrivals(env, model=None, debug=False):
+def compute_arrivals(env, model=None, debug=False, fname_base=None):
     """Compute arrivals between each transmitter and receiver.
 
     :param env: environment definition
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
+    :param fname_base: base file name for Bellhop working files, default (None), creates a temporary file
     :returns: arrival times and coefficients for all transmitter-receiver combinations
 
     >>> import arlpy.uwapm as pm
@@ -324,7 +325,7 @@ def compute_arrivals(env, model=None, debug=False):
         print('[DEBUG] Model: '+model_name)
     return model.run(env, arrivals, debug)
 
-def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False):
+def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model=None, debug=False, fname_base=None):
     """Compute eigenrays between a given transmitter and receiver.
 
     :param env: environment definition
@@ -333,6 +334,7 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
     :param rx_range_ndx: receiver range index
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
+    :param fname_base: base file name for Bellhop working files, default (None), creates a temporary file
     :returns: eigenrays paths
 
     >>> import arlpy.uwapm as pm
@@ -351,15 +353,16 @@ def compute_eigenrays(env, tx_depth_ndx=0, rx_depth_ndx=0, rx_range_ndx=0, model
     (model_name, model) = _select_model(env, eigenrays, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
-    return model.run(env, eigenrays, debug)
+    return model.run(env, eigenrays, debug, fname_base)
 
-def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
+def compute_rays(env, tx_depth_ndx=0, model=None, debug=False, fname_base=None):
     """Compute rays from a given transmitter.
 
     :param env: environment definition
     :param tx_depth_ndx: transmitter depth index
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
+    :param fname_base: base file name for Bellhop working files, default (None), creates a temporary file
     :returns: ray paths
 
     >>> import arlpy.uwapm as pm
@@ -374,9 +377,9 @@ def compute_rays(env, tx_depth_ndx=0, model=None, debug=False):
     (model_name, model) = _select_model(env, rays, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
-    return model.run(env, rays, debug)
+    return model.run(env, rays, debug, fname_base)
 
-def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, debug=False):
+def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, debug=False, fname_base=None):
     """Compute transmission loss from a given transmitter to all receviers.
 
     :param env: environment definition
@@ -384,6 +387,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
     :param mode: coherent, incoherent or semicoherent
     :param model: propagation model to use (None to auto-select)
     :param debug: generate debug information for propagation model
+    :param fname_base: base file name for Bellhop working files, default (None), creates a temporary file
     :returns: complex transmission loss at each receiver depth and range
 
     >>> import arlpy.uwapm as pm
@@ -400,7 +404,7 @@ def compute_transmission_loss(env, tx_depth_ndx=0, mode=coherent, model=None, de
     (model_name, model) = _select_model(env, mode, model)
     if debug:
         print('[DEBUG] Model: '+model_name)
-    return model.run(env, mode, debug)
+    return model.run(env, mode, debug, fname_base)
 
 def arrivals_to_impulse_response(arrivals, fs, abs_time=False):
     """Convert arrival times and coefficients to an impulse response.
@@ -587,7 +591,7 @@ class _Bellhop:
         self._unlink(fname_base+'.log')
         return rv
 
-    def run(self, env, task, debug=False):
+    def run(self, env, task, debug=False, fname_base=None):
         taskmap = {
             arrivals:     ['A', self._load_arrivals],
             eigenrays:    ['E', self._load_rays],
@@ -596,7 +600,11 @@ class _Bellhop:
             incoherent:   ['I', self._load_shd],
             semicoherent: ['S', self._load_shd]
         }
-        fname_base = self._create_env_file(env, taskmap[task][0])
+        fname_flag=False
+        if fname_base is not None:
+            fname_flag = True
+
+        fname_base = self._create_env_file(env, taskmap[task][0], fname_base)
         results = None
         if self._bellhop(fname_base):
             err = self._check_error(fname_base)
@@ -609,6 +617,8 @@ class _Bellhop:
                     print('[WARN] Bellhop did not generate expected output file')
         if debug:
             print('[DEBUG] Bellhop working files: '+fname_base+'.*')
+        elif fname_flag:
+            print('[CUSTOM FILES] Bellhop working files: '+fname_base+'.*')
         else:
             self._unlink(fname_base+'.env')
             self._unlink(fname_base+'.bty')
@@ -652,9 +662,16 @@ class _Bellhop:
                 self._print(fh, "%0.6f " % (j), newline=False)
             self._print(fh, "/")
 
-    def _create_env_file(self, env, taskcode):
-        fh, fname = _mkstemp(suffix='.env')
-        fname_base = fname[:-4]
+    def _create_env_file(self, env, taskcode, fname_base=None):
+
+        # get env file name
+        if fname_base is not None:
+            fname = fname_base+'.env'
+            fh = _os.open(_os.path.abspath(fname), _os.O_WRONLY | _os.O_CREAT | _os.O_TRUNC)
+        else:
+            fh, fname = _mkstemp(suffix='.env')
+            fname_base = fname[:-4]
+
         self._print(fh, "'"+env['name']+"'")
         self._print(fh, "%0.6f" % (env['frequency']))
         self._print(fh, "1")
@@ -672,7 +689,7 @@ class _Bellhop:
         else:
             self._print(fh, "'%cVWT*'" % svp_interp)
             self._create_bty_ati_file(fname_base+'.ati', env['surface'], env['surface_interp'])
-        #max depth should be the depth of the acoustic domain, which can be deeper than the max depth bathymetry
+        # max depth should be the depth of the acoustic domain, which can be deeper than the max depth bathymetry
         max_depth = env['depth'] if _np.size(env['depth']) == 1 else max(_np.max(env['depth'][:,1]), svp_depth)
         self._print(fh, "1 0.0 %0.6f" % (max_depth))
         if _np.size(svp) == 1:
