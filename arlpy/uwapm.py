@@ -295,7 +295,7 @@ def pyplot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='o
     >>> pm.plot_env(env)
     """
     env = check_env2d(env)
-    if np.array(env['rx_range']).size>1:
+    if _np.array(env['rx_range']).size > 1:
         min_x = _np.min(env['rx_range'])
     else:
         min_x = 0
@@ -761,8 +761,8 @@ def pyplot_transmission_loss(tloss, env=None, **kwargs):
         xlabel = 'Range (km)'
     oh = _plt.hold()
     trans_loss = 20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss))))
-    x_mesh, ymesh = _np.meshgrid(np.linspace(xr[0], xr[1], trans_loss.shape[1]),
-                                 np.linspace(yr[0], yr[1], trans_loss.shape[0]))
+    x_mesh, ymesh = _np.meshgrid(_np.linspace(xr[0], xr[1], trans_loss.shape[1]),
+                                 _np.linspace(yr[0], yr[1], trans_loss.shape[0]))
     trans_loss = trans_loss.reshape(-1)
     # print(trans_loss.shape)
     if "vmin" in kwargs.keys():
