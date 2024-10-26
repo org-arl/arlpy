@@ -30,6 +30,7 @@ from struct import unpack as _unpack
 from sys import float_info as _fi
 import arlpy.plot as _plt
 import matplotlib.pyplot as _pyplt
+import matplotlib.cm as _cm
 import bokeh as _bokeh
 
 # constants
