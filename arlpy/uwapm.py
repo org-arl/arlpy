@@ -175,8 +175,8 @@ def check_env2d(env):
                 env['soundspeed'] = env['soundspeed'][:indlarger+1,:]
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
-        # assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
-        # assert env['max_angle'] > -90 and env['max_angle'] < 90, 'max_angle must be in range (-90, 90)'
+        assert env['min_angle'] > -180 and env['min_angle'] < 180, 'min_angle must be in range (-180, 180)'
+        assert env['max_angle'] > -180 and env['max_angle'] < 180, 'max_angle must be in range (-180, 180)'
         if env['tx_directionality'] is not None:
             assert _np.size(env['tx_directionality']) > 1, 'tx_directionality must be an Nx2 array'
             assert env['tx_directionality'].ndim == 2, 'tx_directionality must be an Nx2 array'
