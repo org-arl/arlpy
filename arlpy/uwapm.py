@@ -175,8 +175,8 @@ def check_env2d(env):
                 env['soundspeed'] = env['soundspeed'][:indlarger+1,:]
         assert _np.max(env['tx_depth']) <= max_depth, 'tx_depth cannot exceed water depth: '+str(max_depth)+' m'
         assert _np.max(env['rx_depth']) <= max_depth, 'rx_depth cannot exceed water depth: '+str(max_depth)+' m'
-        assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
-        assert env['max_angle'] > -90 and env['max_angle'] < 90, 'max_angle must be in range (-90, 90)'
+        # assert env['min_angle'] > -90 and env['min_angle'] < 90, 'min_angle must be in range (-90, 90)'
+        # assert env['max_angle'] > -90 and env['max_angle'] < 90, 'max_angle must be in range (-90, 90)'
         if env['tx_directionality'] is not None:
             assert _np.size(env['tx_directionality']) > 1, 'tx_directionality must be an Nx2 array'
             assert env['tx_directionality'].ndim == 2, 'tx_directionality must be an Nx2 array'
@@ -618,8 +618,6 @@ def pyplot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='o
             rxd = env['rx_depth']
             _pyplt.plot([r / divisor] * _np.size(rxd), -rxd, marker='o', color=rx_color, **kwargs)
 
-
-
 def pyplot_ssp(env, **kwargs):
     """Plots the sound speed profile with matplotlib.
 
@@ -659,8 +657,6 @@ def pyplot_ssp(env, **kwargs):
         _pyplt.xlabel('Soundspeed (m/s)')
         _pyplt.ylabel('Depth (m)')
 
-
-
 def pyplot_arrivals(arrivals, dB=False, color='blue', **kwargs):
     """Plots the arrival times and amplitudes with matplotlib.
 
@@ -694,8 +690,6 @@ def pyplot_arrivals(arrivals, dB=False, color='blue', **kwargs):
         _pyplt.plot([t, t], [min_y, y], color=color, **kwargs)
         _pyplt.xlabel('Arrival time (s)')
         _pyplt.ylabel(ylabel)
-
-
 
 def pyplot_rays(rays, env=None, invert_colors=False, **kwargs):
     """Plots ray paths with matplotlib
@@ -740,8 +734,6 @@ def pyplot_rays(rays, env=None, invert_colors=False, **kwargs):
         _pyplt.ylabel('Depth (m)')
     if env is not None:
         pyplot_env(env)
-
-
 
 def pyplot_transmission_loss(tloss, env=None, **kwargs):
     """Plots transmission loss with matplotlib.
@@ -887,7 +879,7 @@ class _Bellhop:
 
     def _bellhop(self, *args):
         try:
-            result = _proc.run(f'bellhop.exe {" ".join(list(args))}',
+            result = _proc.run(f'bellhop.exe {" ".join(list(args))}', 
                         stderr=_proc.STDOUT, stdout=_proc.PIPE,
                         shell=True)
             if result.returncode == 127:
@@ -1122,6 +1114,5 @@ class _Bellhop:
                 temp = _np.array(_unpack('f'*2*nrr, f.read(2*nrr*4)))
                 pressure[ird,:] = temp[::2] + 1j*temp[1::2]
         return _pd.DataFrame(pressure, index=pos_r_depth, columns=pos_r_range)
-
 
 _models.append(('bellhop', _Bellhop))
