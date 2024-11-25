@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='arlpy',
-    version='1.9.0',
+    version='1.9.1',
     description='ARL Python Tools',
     long_description=readme,
     author='Mandar Chitre',
@@ -15,10 +15,12 @@ setup(
     keywords='underwater acoustics signal processing communication',
     packages=find_packages(exclude=('tests', 'docs')),
     install_requires=[
-        'numpy>=1.18.1',
-        'scipy>=1.4.1',
-        'utm>=0.5.0',
-        'pandas>=1.0.1',
-        'bokeh>=1.4.0'
+        'numpy>=1.24.0',
+        'numpy<2.0.0',
+        'scipy>=1.13.0',
+        'scipy<1.14.0',
+        'utm>=0.7.0',
+        'pandas>=1.5.0',
+        'bokeh>=3.0.0'
     ]
 )
