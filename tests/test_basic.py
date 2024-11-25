@@ -168,7 +168,7 @@ class UwapmTestSuite(MyTestCase):
         os.environ["PATH"] = ""
 
         self.assertEqual(uwapm.models(), [])
-        
+
 class SignalTestSuite(MyTestCase):
 
     def test_time(self):
@@ -178,12 +178,12 @@ class SignalTestSuite(MyTestCase):
     def test_cw(self):
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000), np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float64)/50000), precision=6)
         self.assertArrayEqual(signal.cw(10000, 0.1, 50000, complex_output=True), np.exp(2j*np.pi*10000*np.arange(5000, dtype=np.complex128)/50000), precision=6)
-        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float64)/50000), precision=2)
+        self.assertArrayEqual(signal.cw(10000, 0.1, 50000, ('tukey', 0.1)), sp.windows.tukey(5000, 0.1)*np.sin(2*np.pi*10000*np.arange(5000, dtype=np.float64)/50000), precision=2)
 
     def test_sweep(self):
         self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000), sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000, 'linear'))
         self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, 'hyperbolic'), sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000, 'hyperbolic'))
-        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, window=('tukey', 0.1)), sp.tukey(5000, 0.1)*sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000), precision=2)
+        self.assertArrayEqual(signal.sweep(5000, 10000, 0.1, 50000, window=('tukey', 0.1)), sp.windows.tukey(5000, 0.1)*sp.chirp(np.arange(5000, dtype=np.float64)/50000, 5000, 0.1, 10000), precision=2)
 
     def test_envelope(self):
         x = np.random.normal(0, 1, 1000)
