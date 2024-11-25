@@ -3,3 +3,4 @@ scipy>=1.4.1
 utm>=0.5.0
 pandas>=1.0.1
 bokeh>=1.4.0
+matplotlib>=3.9.0
