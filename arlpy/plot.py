@@ -21,6 +21,8 @@ import bokeh.palettes as _bpal
 import bokeh.resources as _bres
 import bokeh.io as _bio
 import scipy.signal as _sig
+import matplotlib.pyplot as plt
+import scipy.signal as sig
 
 light_palette = ['mediumblue', 'crimson', 'forestgreen', 'gold', 'darkmagenta', 'olive', 'palevioletred', 'yellowgreen',
                  'deepskyblue', 'dimgray', 'indianred', 'mediumaquamarine', 'orange', 'saddlebrown', 'teal', 'mediumorchid']
@@ -782,3 +784,140 @@ def freqz(b, a=1, fs=2.0, worN=None, whole=False, degrees=True, style='solid', t
     phase = _np.angle(h)*units
     fig.line(f, phase, line_color=color(1), line_dash=style, line_width=thickness, legend_label='Phase', y_range_name='phase')
     _hold_enable(hold)
+    
+    
+def plot_spectrogram(fxx, pxx, ref=1e-6, title='', figsize=(10,6), **kwargs):
+    """
+    Plot spectrogram of signal.
+
+    Parameters:
+    - fxx: Frequency values
+    - pxx: Level values to plot
+    - ref: Reference level. Default is 1e-6
+    - title: Title for the plot. Default is an empty string.
+    - figsize: Figure size tuple. Default is (10,6)
+    - **kwargs: Additional keyword arguments to pass to specgram.
+
+    Returns:
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.specgram(pxx, Fs=fxx, **kwargs)
+    ax.set_xlabel('Time [s]')
+    ax.set_ylabel('Frequency [Hz]')
+    ax.set_title(f"[Spectrogram] {title}")
+    if ref == 1e-6:
+        ref = "1µ"
+    elif ref == 2e-5:
+        ref ="20µ"
+    else:
+        ref = f"{ref:02e}"
+    plt.colorbar(label=f'Level [dB re {ref}Pa²/Hz]')
+    plt.tight_layout()
+    plt.show()
+    return fig, ax
+
+def plot_psd(fxx, pxx, ref=1e-6, title='', figsize=(10,6), **kwargs):
+    """
+    Plot Power Spectral Density (PSD).
+
+    Parameters:
+    - fxx: Frequency vector of the PSD
+    - pxx: PSD expressed in dB re 1uPa/vHz
+    - ref: Reference level. Default is 1e-6
+    - title: Title for the plot. Default is an empty string
+    - figsize: Figure size tuple. Default is (10,6)
+    - **kwargs: Additional keyword arguments to pass to plot
+
+    Returns:
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.semilogx(fxx, pxx, **kwargs)
+    ax.set_xlabel('Frequency [Hz]')
+    if ref == 1e-6:
+        ref = "1µ"
+    elif ref == 2e-5:
+        ref ="20µ"
+    else:
+        ref = f"{ref:02e}"
+    ax.set_ylabel(f'Level [dB re {ref}Pa²/Hz]')
+    ax.set_title(f"[Power Spectral Density] {title}")
+    ax.grid(True, 'both')
+    plt.tight_layout()
+    plt.show()
+    return fig, ax
+
+def plot_freqz(b, a=1, fs=2.0, title=None, figsize=(10,6)):
+    """
+    Plot frequency response of a filter.
+
+    Parameters:
+    - b: Filter numerator coefficients
+    - a: Filter denominator coefficients. Default is 1
+    - fs: Sampling frequency. Default is 2.0
+    - title: Plot title. Default is None
+    - figsize: Figure size tuple. Default is (10,6)
+
+    Returns:
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    """
+    w, h = sig.freqz(b, a)
+    f = w * fs / (2*np.pi)
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.plot(f, 20*np.log10(np.abs(h)))
+    if title:
+        ax.set_title(title)
+    ax.set_xlabel('Frequency [Hz]')
+    ax.set_ylabel('Magnitude [dB]')
+    ax.grid(True)
+    plt.tight_layout()
+    plt.show()
+    return fig, ax
+
+def plot_wenz(wenz_model, title='', figsize=(10,6), **kwargs):
+    """
+    Plot all noise components and total noise from Wenz model.
+
+    Parameters:
+    - wenz_model: Wenz model object containing noise components
+    - title: Plot title. Default is empty string
+    - figsize: Figure size tuple. Default is (10,6)
+    - **kwargs: Additional keyword arguments to pass to plot
+
+    Returns:
+    - fig: Matplotlib figure object
+    - ax: Matplotlib axes object
+    """
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.semilogx(wenz_model.f, wenz_model.total_noise,
+               label=f'Total noise ({wenz_model.water_depth} water)', color='black', **kwargs)
+    ax.semilogx(wenz_model.f, wenz_model.shipping_noise,
+               label=f'Shipping noise ({wenz_model.shipping_level} traffic)',
+               color='blue', linestyle='dashed', **kwargs)
+    ax.semilogx(wenz_model.f, wenz_model.wind_noise,
+               label=f'Wind noise ({wenz_model.wind_speed} kn)',
+               color='green', linestyle='dashed', **kwargs)
+    ax.semilogx(wenz_model.f, wenz_model.rain_noise,
+               label=f'Rain noise ({wenz_model.rain_rate} rain)',
+               color='orange', linestyle='dashed', **kwargs)
+    ax.semilogx(wenz_model.f, wenz_model.thermal_noise,
+               label='Thermal noise', color='red', linestyle='dashed', **kwargs)
+    ax.semilogx(wenz_model.f, wenz_model.turbulence_noise,
+               label='Turbulence noise', color='purple', linestyle='dashed', **kwargs)
+
+    ax.set_xlabel('Frequency [Hz]')
+    ax.set_ylabel('Noise Level [dB re 1µPa²]')
+    ax.set_title(f'[WENZ - Noise Level Estimate] {title}')
+    ax.set_xlim((wenz_model.f[0], wenz_model.f[-1]))
+    ax.set_ylim((6, 146))
+    ax.legend()
+    ax.grid(True, 'both')
+    plt.tight_layout()
+    plt.show()
+    return fig, ax
+
