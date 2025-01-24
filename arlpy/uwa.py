@@ -13,6 +13,7 @@
 import numbers as _num
 import numpy as _np
 import scipy.signal as _sp
+import matplotlib.pyplot as plt
 
 def soundspeed(temperature=27, salinity=35, depth=10):
     """Get the speed of sound in water.
@@ -278,3 +279,177 @@ def spl(x, ref=1):
     """
     rmsx = _np.sqrt(_np.mean(_np.power(_np.abs(x), 2)))
     return 20*_np.log10(rmsx/ref)
+
+    class WenzModel:
+        """
+        A class to calculate and plot underwater noise levels using the "Wenz" model.
+
+        The model calculates noise level (in dB re uPa) based on five components:
+        (1) Shipping noise (Wenz, 1962)
+        (2) Wind noise (Merklinger, 1979, and Piggott, 1964)
+        (3) Rain noise (Torres and Costa, 2019)
+        (4) Thermal noise (Mellen, 1952)
+        (5) Turbulence noise (Nichols and Bradley, 2016)
+
+        Table 1-1. Beaufort Wind Force and Sea State Numbers Vs Wind Speed
+                   ("AMBIENT NOISE IN THE SEA" R.J.URICK, 1984)
+                                                 Wind Speed
+        Beaufort Number     Sea State       Knots       Meters/Sec
+        0                   0               <1          0 - 0.2
+        1                   1/2             1 - 3       0.3 - 1.5
+        2                   1               4 - 6       1.6 - 3.3
+        3                   2               7 - 10      3.4 - 5.4
+        4                   3               11 - 16     5.5 - 7.9
+        5                   4               17 - 21     8.0 - 10.7
+        6                   5               22 - 27     10.8 - 13.8
+        7                   6               28 - 33     13.9 - 17.1
+        8                   6               34 - 40     17.2 - 20.7
+        """
+
+        def __init__(self, frequencies=_np.linspace(1,100000,100000), wind_speed=0, rain_rate='no', water_depth='deep', shipping_level='medium'):
+            """
+            Initialize the Wenz model with parameters.
+
+            Parameters:
+                frequencies (array): Frequency vector in Hz
+                wind_speed (float): Wind speed in knots
+                rain_rate (str): 'no', 'light', 'moderate', 'heavy', or 'veryheavy'
+                water_depth (str): 'shallow' or 'deep'
+                shipping_level (str): 'no', 'low', 'medium', or 'high'
+            """
+            self.f = _np.array(frequencies).flatten()
+            self.wind_speed = wind_speed
+            self.rain_rate = rain_rate
+            self.water_depth = water_depth
+            self.shipping_level = shipping_level
+            self.compute()
+
+        def _compute_wind_noise(self):
+            """Calculate wind-based noise component."""
+            if self.wind_speed == 0:
+                return _np.zeros_like(self.f)
+
+            f_wind = 2000  # Cutoff for wind noise section
+            s1w = 1.5     # Constant in wind calcs
+            s2w = -5.0    # Constant in wind calc
+            a = -25       # Curve melding exponent
+            slope = s2w * (0.1 / _np.log10(2))  # Slope at high freq
+
+            cst = 45 if self.water_depth == 'shallow' else 42
+
+            i_wind = self.f <= f_wind
+            f_temp = self.f[i_wind] if _np.any(i_wind) else _np.array([2000])
+
+            f0w = 770 - 100 * _np.log10(self.wind_speed)
+            L0w = cst + 20 * _np.log10(self.wind_speed) - 17 * _np.log10(f0w / 770)
+            L1w = L0w + (s1w / _np.log10(2)) * _np.log10(f_temp / f0w)
+            L2w = L0w + (s2w / _np.log10(2)) * _np.log10(f_temp / f0w)
+            Lw = L1w * (1 + (L1w / L2w) ** (-a)) ** (1 / a)
+            temp_noise_dist = 10 ** (Lw / 10)
+
+            NL = _np.zeros_like(self.f)
+            if _np.any(i_wind):
+                NL[i_wind] = temp_noise_dist
+            if _np.any(~i_wind):
+                prop_const = temp_noise_dist[-1] / f_temp[-1] ** slope
+                NL[~i_wind] = prop_const * self.f[~i_wind] ** slope
+
+            return 10 * _np.log10(NL)
+
+        def _compute_thermal_noise(self):
+            """Calculate thermal noise component."""
+            noise = -75.0 + 20.0 * _np.log10(self.f)
+            noise[noise <= 0] = 1
+            return noise
+
+        def _compute_shipping_noise(self):
+            """Calculate shipping noise component."""
+            c1 = 30 if self.water_depth == 'deep' else 65
+            c2 = {'low': 1, 'medium': 4, 'high': 7, 'no': 0}.get(self.shipping_level, 4)
+
+            if self.shipping_level != 'no':
+                noise = 76 - 20 * (_np.log10(self.f) - _np.log10(c1))**2 + 5 * (c2 - 4)
+                noise[noise <= 0] = 1
+                return noise
+            return _np.zeros_like(self.f)
+
+        def _compute_turbulence_noise(self):
+            """Calculate turbulence noise component."""
+
+            noise = 108.5 - 32.5 * _np.log10(self.f)
+            noise[noise <= 0] = 1
+            return noise
+
+        def _compute_rain_noise(self):
+
+            if self.rain_rate == "no":
+                return _np.zeros(len(self.f))
+
+            """Calculate rain noise component."""
+            r0 = [0, 51.0769, 61.5358, 65.1107, 74.3464]
+            r1 = [0, 1.4687, 1.0147, 0.8226, 1.0131]
+            r2 = [0, -0.5232, -0.4255, -0.3825, -0.4258]
+            r3 = [0, 0.0335, 0.0277, 0.0251, 0.0277]
+
+            i_rain = {'light': 1, 'moderate': 2, 'heavy': 3, 'veryheavy': 4}.get(self.rain_rate, 1)
+            fk = self.f / 1000
+            noise = r0[i_rain] + r1[i_rain] * fk + r2[i_rain] * fk**2 + r3[i_rain] * fk**3
+
+            slope = -5.0 * (0.1 / _np.log10(2))
+            ind = _np.where(self.f < 7000)[0][-1]
+            temp_noise = 10**(noise[ind] / 10)
+            prop_const = temp_noise / self.f[ind]**slope
+            noise[self.f > 7000] = 10 * _np.log10(prop_const * self.f[self.f > 7000]**slope)
+
+            return noise
+
+        def _compute_total_noise(self):
+            """Calculate total noise by combining all components."""
+            return 10 * _np.log10(
+                10**(self.thermal_noise/10) +
+                10**(self.wind_noise/10) +
+                10**(self.shipping_noise/10) +
+                10**(self.turbulence_noise/10) +
+                10**(self.rain_noise/10)
+            )
+
+        def compute(self):
+            # Calculate all noise components
+            self.thermal_noise = self._compute_thermal_noise()
+            self.wind_noise = self._compute_wind_noise()
+            self.shipping_noise = self._compute_shipping_noise()
+            self.turbulence_noise = self._compute_turbulence_noise()
+            self.rain_noise = self._compute_rain_noise()
+            self.total_noise = self._compute_total_noise()
+
+        def plot(self, title='', **kwargs):
+            """Plot all noise components and total noise."""
+            fig, ax = plt.subplots()
+
+            ax.semilogx(self.f, self.total_noise,
+                       label=f'Total noise ({self.water_depth} water)', color='black', **kwargs)
+            ax.semilogx(self.f, self.shipping_noise,
+                       label=f'Shipping noise ({self.shipping_level} traffic)',
+                       color='blue', linestyle='dashed', **kwargs)
+            ax.semilogx(self.f, self.wind_noise,
+                       label=f'Wind noise ({self.wind_speed} kn)',
+                       color='green', linestyle='dashed', **kwargs)
+            ax.semilogx(self.f, self.rain_noise,
+                       label=f'Rain noise ({self.rain_rate} rain)',
+                       color='orange', linestyle='dashed', **kwargs)
+            ax.semilogx(self.f, self.thermal_noise,
+                       label='Thermal noise', color='red', linestyle='dashed', **kwargs)
+            ax.semilogx(self.f, self.turbulence_noise,
+                       label='Turbulence noise', color='purple', linestyle='dashed', **kwargs)
+
+            ax.set_xlabel('Frequency [Hz]')
+            ax.set_ylabel('Noise Level [dB re 1µPa²]')
+            ax.set_title(f'[WENZ - Noise Level Estimate] {title}')
+            ax.set_xlim((self.f[0], self.f[-1]))
+            ax.set_ylim((6, 146))
+            ax.legend()
+            ax.grid(True, 'both')
+            plt.tight_layout()
+            plt.show()
+
+            return fig, ax
