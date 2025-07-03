@@ -524,18 +524,18 @@ def plot_transmission_loss(tloss, env=None, **kwargs):
             max_angle=45
         )
     >>> tloss = pm.compute_transmission_loss(env)
-    >>> pm.plot_transmission_loss(tloss, width=1000)
+    >>> pm.plot_transmission_loss(tloss,env, width=1000)
     """
-    xr = (min(tloss.columns), max(tloss.columns))
+    if env is None:
+        raise ValueError("Environment is required")
+    xr = (env['rx_range'].min(), env['rx_range'].max())
     yr = (-max(tloss.index), -min(tloss.index))
     xlabel = 'Range (m)'
     if xr[1]-xr[0] > 10000:
-        xr = (min(tloss.columns)/1000, max(tloss.columns)/1000)
+        xr = (env['rx_range'].min()/1000, env['rx_range'].max()/1000)
         xlabel = 'Range (km)'
     oh = _plt.hold()
     _plt.image(20*_np.log10(_fi.epsilon+_np.abs(_np.flipud(_np.array(tloss)))), x=xr, y=yr, xlabel=xlabel, ylabel='Depth (m)', xlim=xr, ylim=yr, **kwargs)
-    if env is not None:
-        plot_env(env, rx_plot=False)
     _plt.hold(oh)
 
 def pyplot_env(env, surface_color='dodgerblue', bottom_color='peru', tx_color='orangered', rx_color='midnightblue',
