@@ -2,6 +2,20 @@
 
 [![CI](https://github.com/org-arl/arlpy/workflows/CI/badge.svg)](https://github.com/org-arl/arlpy/actions)
 
+> [!NOTE]
+> **This package is now in maintainence mode** and not being actively developed. I personally no longer use
+> Python much, as all my scientific work has now moved to Julia. I still maintain this package for others
+> who use it, but new features rarely get implemented. I am, however, happy to review and take in PRs from
+> contributors who would like to add features or fix bugs.
+
+> [!TIP]
+> For those of you who use this package as a Python front-end to BELLHOP, there is now a better option to consider.
+> The [`UnderwaterAcoustics.jl`](https://github.com/org-arl/UnderwaterAcoustics.jl) ecosystem provides
+> a unified interface to a variety of propagation models including BELLHOP, KRAKEN, etc. Although developed
+> for Julia, the packages can [easily be used from Python](https://org-arl.github.io/UnderwaterAcoustics.jl/python.html).
+
+## Introduction
+
 Packages such as `numpy` and `scipy` provide excellent mathematical tools for
 scientists and engineers using Python. However, these packages are still young
 and evolving, and understandably have some gaps, especially when it comes to
