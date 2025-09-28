@@ -11,7 +11,7 @@
 > [!TIP]
 > For those of you who use this package as a Python front-end to BELLHOP, there is now a better option to consider.
 > The [`UnderwaterAcoustics.jl`](https://github.com/org-arl/UnderwaterAcoustics.jl) ecosystem provides
-> a unified interface to a variety of propagation models including BELLHOP, KRAKEN, etc. Although developed
+> a unified and more capable interface to a variety of propagation models including BELLHOP, KRAKEN, ORCA, etc. Although developed
 > for Julia, the packages can [easily be used from Python](https://org-arl.github.io/UnderwaterAcoustics.jl/python.html).
 
 ## Introduction
@@ -67,7 +67,20 @@ Png export of bokeh plots requires `selenium`, `pillow` and `phantomjs`. These a
 installed as automatic depdendencies, since they are optional and only required
 for png export. These should be installed manually, if desired.
 
+## Citing
+
+```
+@software{arlpy,
+  author = {Mandar Chitre},
+  title = {{arlpy}: ARL Python Tools},
+  version = {1.9.1},
+  year = {2024},
+  url = {https://github.com/org-arl/arlpy/tree/v1.9.1}
+}
+```
+
 ## Useful links
 
 * [arlpy home](https://github.com/org-arl/arlpy)
+* [arlpy on PyPi](https://pypi.org/project/arlpy/)
 * [arlpy documentation](https://arlpy.readthedocs.io/en/latest/)
