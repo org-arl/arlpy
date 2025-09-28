@@ -71,7 +71,7 @@ for png export. These should be installed manually, if desired.
 
 ```
 @software{arlpy,
-  author = {Mandar Chitre},
+  author = {Mandar Chitre and others},
   title = {{arlpy}: ARL Python Tools},
   version = {1.9.1},
   year = {2024},
