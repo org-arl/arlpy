@@ -1038,6 +1038,7 @@ class _Bellhop:
                 rx_depth = self._readf(f, (float,)*rx_depth_count)
                 rx_range = self._readf(f, (float,)*rx_range_count)
             arrivals = []
+            omega = freq[0] * 2 * _np.pi
             for j in range(tx_depth_count):
                 f.readline()
                 for k in range(rx_depth_count):
@@ -1045,24 +1046,20 @@ class _Bellhop:
                         count = int(f.readline())
                         for n in range(count):
                             data = self._readf(f, (float, float, float, float, float, float, int, int))
-                            arrivals.append(_pd.DataFrame({
-                                'tx_depth_ndx': [j],
-                                'rx_depth_ndx': [k],
-                                'rx_range_ndx': [m],
-                                'tx_depth': [tx_depth[j]],
-                                'rx_depth': [rx_depth[k]],
-                                'rx_range': [rx_range[m]],
-                                'arrival_number': [n],
-                                # 'arrival_amplitude': [data[0]*_np.exp(1j * data[1]* _np.pi/180)],
-                                'arrival_amplitude': [data[0] * _np.exp( -1j * (_np.deg2rad(data[1]) + freq[0] * 2 * _np.pi * (data[3] * 1j +  data[2])))],
-                                'time_of_arrival': [data[2]],
-                                'complex_time_of_arrival': [data[2] + 1j*data[3]],
-                                'angle_of_departure': [data[4]],
-                                'angle_of_arrival': [data[5]],
-                                'surface_bounces': [data[6]],
-                                'bottom_bounces': [data[7]]
-                            }, index=[len(arrivals)+1]))
-        return _pd.concat(arrivals)
+                            amp = data[0] * _np.exp(-1j * (_np.deg2rad(data[1]) + omega * (data[3] * 1j + data[2])))
+                            arrivals.append((
+                                j, k, m,
+                                tx_depth[j], rx_depth[k], rx_range[m], n,
+                                amp, data[2], data[2] + 1j*data[3],
+                                data[4], data[5], data[6], data[7],
+                            ))
+        return _pd.DataFrame(arrivals, columns=[
+            'tx_depth_ndx', 'rx_depth_ndx', 'rx_range_ndx',
+            'tx_depth', 'rx_depth', 'rx_range', 'arrival_number',
+            'arrival_amplitude', 'time_of_arrival', 'complex_time_of_arrival',
+            'angle_of_departure', 'angle_of_arrival',
+            'surface_bounces', 'bottom_bounces',
+        ])
 
     def _load_rays(self, fname_base):
         with open(fname_base+'.ray', 'rt') as f:
