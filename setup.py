@@ -8,6 +8,7 @@ setup(
     version='1.9.2',
     description='ARL Python Tools',
     long_description=readme,
+    long_description_content_type='text/markdown',
     author='Mandar Chitre',
     author_email='mandar@nus.edu.sg',
     url='https://github.com/org-arl/arlpy',
