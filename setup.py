@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='arlpy',
-    version='1.9.1',
+    version='1.9.2',
     description='ARL Python Tools',
     long_description=readme,
     author='Mandar Chitre',
