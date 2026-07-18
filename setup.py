@@ -5,7 +5,7 @@ with open('README.md') as f:
 
 setup(
     name='arlpy',
-    version='1.9.2',
+    version='1.9.3',
     description='ARL Python Tools',
     long_description=readme,
     long_description_content_type='text/markdown',
@@ -22,6 +22,7 @@ setup(
         'scipy<1.14.0',
         'utm>=0.7.0',
         'pandas>=1.5.0',
-        'bokeh>=3.0.0'
+        'bokeh>=3.0.0',
+        'matplotlib>=3.9.0'
     ]
 )
