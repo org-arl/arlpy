@@ -82,7 +82,12 @@ def create_env2d(**kv):
             100: [1540, 1535, 1530, 1533],     # profile at 100 m range
             200: [1530, 1520, 1522, 1525] },   # profile at 200 m range
             index=[0, 10, 20, 30])             # depths of the profile entries in m
-    >>> env = pm.create_env2d(depth=20, soundspeed=ssp2)
+    When using a range-dependent sound speed profile with Bellhop, bathymetry must
+    also be specified as range-dependent, even for a flat bottom. The final range
+    in the bathymetry must be at or beyond the maximum receiver range:
+
+    >>> env = pm.create_env2d(
+    ...     depth=[[0,20], [200,20]], soundspeed=ssp2, rx_range=200)
 
     The default environment has a constant water depth. A range dependent bathymetry
     can be provided as a Nx2 array of (range, water depth):
